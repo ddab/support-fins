@@ -354,6 +354,26 @@ set the numbers.
 | clearance | `sideClear` off the part (only at stations whose floor is the plate) and off every other support below the rib's top, in plan, ~1 mm pieces | no rib fuses two pieces; a 3D box grid was exact but cost 4 s on bigplate Y35, this ~0.2 s |
 | skipped | a wall the fill pass already ribbed (the slim rule) | no doubled ribs |
 
+## Gussets (Draw only) — `web/gusset.js`
+
+Prototype, not printed yet. Under an upside-down L every other support hangs straight
+down to the plate, though the L's own upright is right there. A gusset stands off the
+upright instead: a vertical triangle square off the side, tined to it at the gap, its top
+the usual tip under the overhang, its underside climbing out from the side steeply
+enough to print unsupported. Nothing under it reaches the plate. Placed by hand only:
+Draw > Gusset, a click on the side, then a click on the overhang.
+
+| feature | value | rationale |
+|---|---|---|
+| direction | the clicked face's normal, levelled; the second click sets only the reach | square off the side, so the inner end sits evenly at the gap |
+| underside | `GUSSET.angle` (**50°**) from level, never flatter than **45°** | the 45° a printer holds, with margin; a coupon should set it |
+| reach | **3–40 mm** out from the side | shorter is a tine; longer is a sail, stand a wall on the plate |
+| outer end | **2 mm** deep under the overhang (at least `minHeight` + `footGap`) | no knife edge at the tip |
+| body | `sweepBetween` run out from the side, its floor line the sloped underside | the part-attached wall's tip, gap and holes, unchanged |
+| side tines | sway's tine (`SWAY.tineW`, one layer, kissed) every **2 mm** up the inner edge, below the tip taper | the side is what holds the fin; sway's tine is the proven side grip |
+| top tines | `emitTines` along the contact line, as a drawn wall | a flat underside gets none, same as a drawn wall |
+| refused | not an upright face (≤ 30° lean); the side doesn't reach ≥ 80 % of the inner edge; the body would enter the part | says why, before the click, in the ghost |
+
 ## Joined walls and ties (Full coverage) — `web/fins/fill.js`, `web/prop/ties.js`
 
 Not printed yet. A figure's fill walls stood apart, each on its own ("all the fins become

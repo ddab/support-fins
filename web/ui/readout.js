@@ -211,15 +211,18 @@ function updateDrawReadout(built, ms) {
 
   const ok = drawnWalls.filter((w) => w.ok);
   const bad = drawnWalls.length - ok.length;
-  const tines = ok.reduce((a, w) => a + (w.info?.tines ?? 0), 0);
+  const tines = ok.reduce((a, w) => a + (w.info?.tines ?? 0) + (w.info?.sideTines ?? 0), 0);
   const braces = ok.filter((w) => w.kind === 'sway').length;
-  const walls = ok.length - braces;
+  const gussets = ok.filter((w) => w.kind === 'gusset').length;
+  const walls = ok.length - braces - gussets;
+  const sideTines = ok.reduce((a, w) => a + (w.info?.sideTines ?? 0), 0);
   const ribs = ok.reduce((a, w) => a + (w.kind === 'sway' ? 0 : w.info?.braces ?? 0), 0);
   const crosses = ok.reduce((a, w) => a + (w.kind === 'sway' ? w.info?.cross ?? 0 : 0), 0);
   const parts = [];
   if (walls) parts.push(tn('{n} drawn wall', '{n} drawn walls', walls) + (ribs ? ` · ${tn('{n} wall rib', '{n} wall ribs', ribs)}` : ''));
   if (braces) parts.push(tn('{n} sway brace', '{n} sway braces', braces)
     + (crosses ? ` · ${tn('{n} brace rib', '{n} brace ribs', crosses)}` : ''));
+  if (gussets) parts.push(tn('{n} gusset', '{n} gussets', gussets));
   box.textContent = ok.length
     ? parts.join(' + ') + (tines ? ` · ${tineCount(tines)}` : '')
     : t('none yet');
@@ -228,7 +231,10 @@ function updateDrawReadout(built, ms) {
   const lead = [];
   const help = [];
   if (!drawnWalls.length && !drawMsg) {
-    lead.push(drawShapeNow() === 'curve'
+    lead.push(drawShapeNow() === 'gusset'
+      ? t('Click a side of the part under an overhang, then the overhang itself, '
+        + 'to stand a gusset off the side')
+      : drawShapeNow() === 'curve'
       ? t('Click the two ends of a curve on the overhang, then a point it runs through, '
         + 'to lay a curved breakaway wall under it')
       : t('Click two points across an overhang (a line lands right where you '

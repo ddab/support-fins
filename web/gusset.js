@@ -1,0 +1,201 @@
+/**
+ * GUSSETS -- a breakaway fin that stands off a SIDE of the part instead of the plate.
+ *
+ * Every other support here hangs straight down from its contact line to whatever is
+ * under it: the plate, or a lower piece of the part. Under an upside-down L that is
+ * the plate, so the overhang gets a tall wall from the bed even though the L's own
+ * upright is right there. A gusset uses the upright: a triangle in the vertical plane
+ * square off the side, its inner edge tined to the side at the breakaway gap, its top
+ * edge the usual tip under the overhang, and its underside climbing out from the side
+ * at GUSSET.angle -- steep enough to print without support of its own, so nothing
+ * under it ever reaches the plate.
+ *
+ *            overhang
+ *   ██████████████████████
+ *   ██      ▔▔▔▔▔▔▔▔▔▔▔▔ ← tip, PROP.gap under the overhang (tines when Tines is on)
+ *   ██≡    ▕          ╱
+ *   ██≡    ▕        ╱    ← underside at GUSSET.angle from level
+ *   ██≡    ▕      ╱
+ *   ██≡    ▕    ╱
+ *   ██ ↑   ▕  ╱
+ *   ██ tines into the side, one layer tall, at the gap
+ *   ██
+ *
+ * Built from the same pieces as the rest: the body is prop/sweep.js's `sweepBetween`
+ * run OUT from the side (its floor line is the sloped underside, so its stations, tip,
+ * gap and holes are a part-attached wall's), the top tines are prop/tines.js's comb,
+ * and the side tines are sway.js's (kissEnds, one layer, SWAY's widths).
+ *
+ * Placement is by hand only (Draw > Gusset): a click on the side, then a click on the
+ * overhang it should reach. The fin runs square off the side (the clicked face's
+ * normal); the second click only sets how far it reaches.
+ */
+import { insidePart } from './inside.js';
+import { kissEnds } from './kiss.js';
+import { PROP, emitTines, tineStepFor, crestOn, crestPart } from './prop.js';
+import { surfaceHitsAt } from './prop/surface.js';
+import { sweepBetween } from './prop/sweep.js';
+import { loftExtrude } from './solids.js';
+import { SWAY } from './sway.js';
+
+export const GUSSET = {
+  angle: 50,          // deg from level, the underside's climb: steeper than the 45 a printer holds
+  minAngle: 45,       // ...and a setting may not go flatter than this
+  minReach: 3,        // mm out from the side: shorter than this is a tine, not a fin
+  maxReach: 40,       // mm: past this a gusset is a sail -- stand a wall on the plate
+  endDepth: 2,        // mm: the fin's outer end stands this tall under the overhang, not a knife edge
+  wallProbe: 0.5,     // mm into the side: where "is the side solid here?" is asked
+  wallShare: 0.8,     // ...and how much of the fin's inner edge must have side behind it
+  tineSpacing: 2,     // mm between side tines up the inner edge
+  clearStep: 0.5,     // mm: the body's part-clearance sampled this finely
+  maxUpright: 30,     // deg: the clicked face may lean no further than this from upright
+};
+
+/** The clicked face's outward normal, levelled: the way the fin runs. Null when the
+ *  face isn't a side (a floor, a roof, or leaning past GUSSET.maxUpright). */
+export function gussetDir(topo, rot, faceIndex) {
+  const i = faceIndex * 3, n = topo.nrm;
+  const x = rot[0] * n[i] + rot[3] * n[i + 1] + rot[6] * n[i + 2];
+  const y = rot[1] * n[i] + rot[4] * n[i + 1] + rot[7] * n[i + 2];
+  const z = rot[2] * n[i] + rot[5] * n[i + 1] + rot[8] * n[i + 2];
+  const h = Math.hypot(x, y);
+  if (h < 1e-6 || Math.abs(z) > Math.sin((GUSSET.maxUpright * Math.PI) / 180)) return null;
+  return [x / h, y / h];
+}
+
+/** The underside the fin holds up at (x, y): the lowest down-facing surface above
+ *  `zMin`. Null when there is none (open sky over that station). */
+function undersideAt(tris, x, y, zMin) {
+  let best = null;
+  for (const [z, nz] of surfaceHitsAt(tris, x, y)) {
+    if (nz < 0 && z > zMin && (best === null || z < best)) best = z;
+  }
+  return best;
+}
+
+/**
+ * The gusset off the side at `w` (print space, a point on face `faceIndex`) out to the
+ * overhang at `o`. `tris`: the part in print space; `opts`: { topo, rot, offset,
+ * angle?, tines?, tineDensity?, layerHeight? } (topo, rot and offset are required:
+ * the side and the clearance are checked against the solid).
+ *
+ * Returns { ok: true, tris, reach, height, tines, sideTines, top, floors } or
+ * { ok: false, reason }.
+ */
+export function gussetAt(w, o, faceIndex, tris, opts) {
+  const { topo, rot, offset } = opts;
+  const dir = gussetDir(topo, rot, faceIndex);
+  if (!dir) return { ok: false, reason: 'start a gusset on a side of the part — an upright face under the overhang' };
+  const [nx, ny] = dir;
+  const reach = (o[0] - w[0]) * nx + (o[1] - w[1]) * ny;
+  if (reach < GUSSET.minReach) {
+    return { ok: false, reason: `gusset too short — reaches ${Math.max(0, reach).toFixed(1)}mm out from the side, needs ${GUSSET.minReach}mm` };
+  }
+  if (reach > GUSSET.maxReach) {
+    return { ok: false, reason: `gusset too long — ${reach.toFixed(0)}mm out from the side, at most ${GUSSET.maxReach}mm; stand a wall on the plate instead` };
+  }
+  const angle = Math.max(GUSSET.minAngle, Number.isFinite(opts.angle) ? opts.angle : GUSSET.angle);
+  const slope = Math.tan((angle * Math.PI) / 180);
+  const layerH = opts.layerHeight ?? PROP.tineH;
+
+  // Stations out from the side: the first at the gap (the inner end stands off the
+  // side, the tines bridge it), then every stationStep to the clicked reach.
+  const u0 = PROP.gap, u1 = reach;
+  const n = Math.max(PROP.minStations, Math.ceil((u1 - u0) / PROP.stationStep) + 1);
+  const at = (u) => [w[0] + nx * u, w[1] + ny * u];
+  const top = [];
+  for (let k = 0; k < n; k++) {
+    const u = u0 + ((u1 - u0) * k) / (n - 1);
+    const [x, y] = at(u);
+    const z = undersideAt(tris, x, y, w[2]);
+    if (z === null) return { ok: false, reason: 'nothing overhangs there — the gusset has to run out under the overhang' };
+    top.push([x, y, z]);
+  }
+
+  // The underside: up from the inner end at `slope` to GUSSET.endDepth under the outer
+  // tip. A station whose underside would sink under the plate stands on it instead
+  // (sweepBetween's floor of 0): a fin that long off a side that low is half a wall.
+  const zEnd = top[n - 1][2] - PROP.gap - Math.max(GUSSET.endDepth, PROP.minHeight + PROP.footGap + 0.1);
+  const floors = top.map((p, k) => {
+    const u = u0 + ((u1 - u0) * k) / (n - 1);
+    const z = zEnd - (u1 - u) * slope;
+    return [p[0], p[1], z < 0.5 ? 0 : z];
+  });
+
+  // The side has to be there behind the inner edge, all the way down it: an L whose
+  // upright stops short (or a click past the side's end) leaves the fin hanging.
+  const zLo = floors[0][2] + PROP.footGap, zHi = top[0][2] - PROP.gap;
+  const [bx, by] = at(-GUSSET.wallProbe);
+  let behind = 0, asked = 0;
+  for (let z = zLo + 0.25; z < zHi - 0.25; z += 0.5) {
+    asked++;
+    if (insidePart(topo, rot, offset, bx, by, z)) behind++;
+  }
+  if (!asked || behind < GUSSET.wallShare * asked) {
+    return { ok: false, reason: `the side doesn’t run far enough down for a gusset this long at ${angle}° — reach less far, or start it lower on the side` };
+  }
+
+  // The body must stay out of the part everywhere but its contacts: through its
+  // middle and both faces, strictly between its floor and its top.
+  const half = PROP.th / 2;
+  for (let k = 0; k < n; k++) {
+    const [x, y, zt] = top[k];
+    const zb = floors[k][2] + (floors[k][2] > 0 ? PROP.footGap : 0);
+    for (const s of [-half, 0, half]) {
+      const px = x - ny * s, py = y + nx * s;
+      for (let z = zb + 0.1; z < zt - PROP.gap - 0.1; z += GUSSET.clearStep) {
+        if (insidePart(topo, rot, offset, px, py, z)) {
+          return { ok: false, reason: 'the gusset runs into the part — start it where the side is flat and clear out to the overhang' };
+        }
+      }
+    }
+  }
+
+  const out = [];
+  if (crestOn()) crestPart(tris, layerH);
+  if (!sweepBetween(top, floors, out, PROP.minHeightSquat)) {
+    return { ok: false, reason: 'too little room under the overhang there for a gusset' };
+  }
+  let height = 0;
+  for (let k = 0; k < n; k++) height = Math.max(height, top[k][2] - PROP.gap - floors[k][2]);
+
+  // Side tines: one layer each, every GUSSET.tineSpacing up the inner edge, from just
+  // inside the fin's end across the gap into the side (sway.js's tine, kissed).
+  let sideTines = 0;
+  if (opts.tines) {
+    const tw = SWAY.tineW / 2;
+    const ox = w[0] + nx * u0, oy = w[1] + ny * u0, ax = -nx, ay = -ny;
+    const zTop = top[0][2] - PROP.gap - PROP.tipH - 0.25;
+    for (let z = zLo + 0.5; z <= zTop + 1e-6; z += GUSSET.tineSpacing) {
+      const bot = Math.round(z / layerH) * layerH, tp = bot + layerH;
+      if (bot < zLo || tp > zTop + layerH) continue;
+      const e = kissEnds(topo, rot, offset, ox, oy, ax, ay, bot, tp,
+                         { half: tw, back: SWAY.tineOverlap, reach: u0 + SWAY.tineReach });
+      if (Math.max(...e.bot, ...e.top) > u0 + SWAY.tineSpanMax) continue;   // a bridge, not a tine
+      const P = (a, b, zz) => [ox + ax * a - ay * b, oy + ay * a + ax * b, zz];
+      const outline = (h) => [[-SWAY.tineOverlap, -tw], [e[h][0], -tw], [e[h][1], tw], [-SWAY.tineOverlap, tw]];
+      const local = [];
+      loftExtrude(outline('bot'), outline('top'), bot, tp, P, local);
+      pushOutward(local, out);
+      sideTines++;
+    }
+  }
+  // Top tines: the comb every drawn wall gets along its contact line.
+  const tines = opts.tines
+    ? emitTines(top, tris, topo, rot, offset, out, tineStepFor(opts.tineDensity ?? 1), undefined, layerH)
+    : 0;
+
+  return { ok: true, tris: out, reach, height, angle, tines, sideTines, top, floors: floors.map((f) => f[2]) };
+}
+
+/** Append a closed solid wound outward (positive volume), flipping it if not. */
+function pushOutward(local, out) {
+  let V = 0;
+  for (let i = 0; i < local.length; i += 3) {
+    const a = local[i], b = local[i + 1], c = local[i + 2];
+    V += a[0] * (b[1] * c[2] - b[2] * c[1]) + a[1] * (b[2] * c[0] - b[0] * c[2])
+       + a[2] * (b[0] * c[1] - b[1] * c[0]);
+  }
+  if (V < 0) for (let i = 0; i < local.length; i += 3) out.push(local[i], local[i + 2], local[i + 1]);
+  else for (const v of local) out.push(v);
+}

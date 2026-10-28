@@ -7,6 +7,7 @@ import { t } from './i18n.js';
  */
 import * as THREE from 'three';
 import { drawnWall } from '../draw.js';
+import { gussetAt, gussetDir } from '../gusset.js';
 import { arcThrough, arcStations } from '../drawarc.js';
 import { planGrid } from '../fins/tall.js';
 import { swayAtFace, faceIsUpright } from '../sway.js';
@@ -35,14 +36,16 @@ export function setDrawnWalls(w) { drawnWalls = w; }
 export let drawnMesh = null;
 export let drawnTris = [];
 export let drawStart = null;       // Vector3 (local) -- first click of a wall in progress
+let drawFace = null;              // a gusset in progress: the side face its first click hit
 let drawEnd = null;                // Vector3 (local) -- a curve's second click (its other end)
 // Line or Curve (local issue 063): a curve is three clicks -- its ends, then a point it
 // runs through -- built round the circular arc through all three (drawarc.js).
+// Gusset (gusset.js) is two clicks too: a side of the part, then the overhang it holds.
 // Remembered per browser (optional).
 const SHAPE_KEY = 'support_fins_draw_shape';
 let drawShape = 'line';
 export const drawShapeNow = () => drawShape;
-try { if (localStorage.getItem(SHAPE_KEY) === 'curve') drawShape = 'curve'; } catch { /* storage off */ }
+try { const s = localStorage.getItem(SHAPE_KEY); if (s === 'curve' || s === 'gusset') drawShape = s; } catch { /* storage off */ }
 export let drawMsg = '';           // last placement result, for the readout
 let printTris = null;       // whole part in print space, cached per orientation
 let printTrisDirty = true;
@@ -145,7 +148,7 @@ export function printTriangles(topology, rot, { x: dx, y: dy, z: dz }) {
 
 /** Drop any wall-in-progress and hide every transient draw visual. */
 export function clearPreview() {
-  drawStart = drawEnd = null;
+  drawStart = drawEnd = drawFace = null;
   ghostQueued = null;   // a frame already queued would rebuild the dropped wall's ghost
   drawDot.visible = drawDot2.visible = drawCursor.visible = drawBand.visible = false;
   dropGhost();
@@ -194,11 +197,13 @@ function arcPoints(a, b, m) {
 // A curve the ghost can't build says why in the readout, as soon as it can't
 // (a placed wall's refusal already does): changed only when the reason does.
 let ghostMsg = '';
-function showGhostMsg(msg) {
+function showGhostMsg(msg, what = 'curve') {
   drawBand.material.color.setHex(msg ? BAND_BAD : BAND_OK);
   if (msg === ghostMsg) return;
   ghostMsg = msg;
-  drawMsg = msg ? t('can’t place this curve: {reason}', { reason: t(msg) }) : '';
+  drawMsg = !msg ? ''
+    : what === 'gusset' ? t('can’t place this gusset: {reason}', { reason: t(msg) })
+    : t('can’t place this curve: {reason}', { reason: t(msg) });
   updateReadout(lastBuilt);
 }
 
@@ -214,7 +219,7 @@ function snapEnd(p) {
   let best = null, bd = tol;
   const q = new THREE.Vector3();
   for (const w of drawnWalls) {
-    if (w.kind === 'sway') continue;
+    if (w.kind) continue;   // only drawn walls have ends to snap to
     for (const end of [w.a, w.b]) {
       part.localToWorld(q.copy(end));
       const d = q.distanceTo(p);
@@ -311,6 +316,19 @@ export function sweepDrawn({ topology, res, rot, tris, walls, toWorld, auto: bui
       w.triEnd = out.length / 3;
       continue;
     }
+    if (w.kind === 'gusset') {
+      // A gusset: re-stood off the same side face, out to the same overhang point,
+      // so it follows the part when it turns (and says why when that face no longer
+      // stands upright under an overhang).
+      toWorld(w.a, wa);
+      toWorld(w.b, wb);
+      const r = gussetAt(toArr(wa), toArr(wb), w.face, tris, drawOpts);
+      w.ok = r.ok;
+      w.info = r;
+      if (r.ok) for (const t of r.tris) out.push(t);
+      w.triEnd = out.length / 3;
+      continue;
+    }
     toWorld(w.a, wa);
     toWorld(w.b, wb);
     const r = drawnWall([wa.x, wa.y, wa.z], [wb.x, wb.y, wb.z], tris, 0,
@@ -368,8 +386,11 @@ export function selectedNote() {
   const i = selectedWall.info ?? {};
   const what = selectedWall.kind === 'sway'
     ? t('sway brace {mm}mm tall', { mm: Math.round(i.height ?? 0) })
-    : t('wall {mm}mm long', { mm: Math.round(i.length ?? 0) });
-  const tines = i.tines ? `, ${t('{n} tines', { n: i.tines })}` : '';
+    : selectedWall.kind === 'gusset'
+      ? t('gusset {mm}mm out from the side', { mm: Math.round(i.reach ?? 0) })
+      : t('wall {mm}mm long', { mm: Math.round(i.length ?? 0) });
+  const nTines = (i.tines ?? 0) + (i.sideTines ?? 0);
+  const tines = nTines ? `, ${t('{n} tines', { n: nTines })}` : '';
   return t('selected: {what}{tines}. Press Delete or Remove selected to take it out (Esc to keep it)', { what, tines });
 }
 
@@ -421,6 +442,15 @@ function updatePreview(hitPoint) {
     if (ghostMesh) { scene.remove(ghostMesh); ghostMesh.geometry.dispose(); ghostMesh = null; }
     const tris = partPrintTriangles();
     const [ga, gb, gm] = q;
+    if (drawFace !== null) {
+      // a gusset in progress: the ghost is the fin the second click stands, and a
+      // spot it can't reach says why at once (the band turns red)
+      const r = gussetAt([ga.x, ga.y, ga.z], [gb.x, gb.y, gb.z], drawFace, tris,
+                         { topo: topology, rot: rotM3.elements, offset: lastResult.offset });
+      if (r.ok) { ghostMesh = meshFrom(r.tris, ghostMaterial); ghostMesh?.layers.disable(MODEL); }
+      showGhostMsg(r.ok ? '' : r.reason, 'gusset');
+      return;
+    }
     const r = drawnWall([ga.x, ga.y, ga.z], [gb.x, gb.y, gb.z], tris, 0,
                         { braceTall: el('tall-ribs').checked,   // the ghost shows its ribs
                           ...(gm ? { through: [gm.x, gm.y, gm.z] } : {}) });
@@ -454,6 +484,26 @@ function placeWall(bWorld, mWorld = null) {
   histPush();
   drawnWalls.push({ a: drawStart.clone(), b: part.worldToLocal(bWorld.clone()),
                     ...(mWorld ? { m: part.worldToLocal(mWorld.clone()) } : {}) });
+  clearPreview();
+  rebuildDrawn();
+  updateReadout(lastBuilt);
+  updateFit();
+}
+
+/** Commit the gusset off the side clicked first (`drawStart` on `drawFace`) out to `bWorld`. */
+function placeGusset(bWorld) {
+  part.updateMatrixWorld();
+  const aWorld = part.localToWorld(drawStart.clone());
+  const r = gussetAt([aWorld.x, aWorld.y, aWorld.z], [bWorld.x, bWorld.y, bWorld.z], drawFace,
+                     partPrintTriangles(), { topo: topology, rot: rotM3.elements, offset: lastResult.offset });
+  if (!r.ok) {
+    // keep the side: the next click tries another reach
+    showGhostMsg(r.reason, 'gusset');
+    return;
+  }
+  drawMsg = '';
+  histPush();
+  drawnWalls.push({ kind: 'gusset', face: drawFace, a: drawStart.clone(), b: part.worldToLocal(bWorld.clone()) });
   clearPreview();
   rebuildDrawn();
   updateReadout(lastBuilt);
@@ -604,7 +654,9 @@ export function syncDrawControls() {
   el('draw-controls').hidden = !drawShown();
   el('draw-hint').hidden = el('draw-shape').hidden = !drawActive();
   for (const b of el('draw-shape').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.shape === drawShape));
-  el('draw-hint').innerHTML = drawShape === 'curve'
+  el('draw-hint').innerHTML = drawShape === 'gusset'
+    ? t('Click a side of the part under an overhang, then the point on the overhang the gusset should reach out to. It runs square off the side, its underside climbing at 50° so nothing under it touches the plate. Backspace takes back the side; Esc or right-click cancels.')
+    : drawShape === 'curve'
     ? t('Click the two ends of a curved wall on the red faces, then a point it runs through — out past the ends for a bigger arc. Ends snap to another wall’s end, so two curves close a ring. Backspace takes back a point; Esc or right-click cancels.')
     : t('Click two points across an overhang — straight onto the red faces — to lay a breakaway wall along that line. Hover an upright side to preview a sway brace: its top follows the cursor, and near the top of the side it runs full height. Click to stand it. Esc or right-click cancels.');
   syncBack();
@@ -724,7 +776,8 @@ export function braceClick(e) {
 }
 
 /** With Sway braces on, a click on an UPRIGHT side (no wall half-drawn) stands a brace. */
-const swayHit = (hit) => !drawStart && el('sway').checked && faceIsUpright(topology, rotM3.elements, hit.faceIndex);
+const swayHit = (hit) => !drawStart && el('sway').checked && !(drawActive() && drawShape === 'gusset')
+  && faceIsUpright(topology, rotM3.elements, hit.faceIndex);
 
 /** A click: select a placed support, stand a sway brace, or set / commit a wall end. */
 export function drawClick(e) {
@@ -741,6 +794,23 @@ export function drawClick(e) {
   // a click on anything else still starts a two-point wall as before.
   if (swayHit(hit)) {
     placeSway(hit);
+    return;
+  }
+  if (drawShape === 'gusset') {
+    if (drawStart) { placeGusset(hit.point.clone()); return; }
+    if (!gussetDir(topology, rotM3.elements, hit.faceIndex)) {
+      drawMsg = t('couldn’t start a gusset there: {reason}',
+                  { reason: t('start a gusset on a side of the part — an upright face under the overhang') });
+      updateReadout(lastBuilt);
+      return;
+    }
+    dropGhost();
+    drawStart = part.worldToLocal(hit.point.clone());
+    drawFace = hit.faceIndex;
+    drawMsg = '';
+    updatePreview(hit.point);
+    updateReadout(lastBuilt);
+    syncBack();
     return;
   }
   if (!drawStart) {
