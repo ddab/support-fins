@@ -131,7 +131,11 @@ export function gussetAt(w, o, faceIndex, tris, opts) {
     asked++;
     if (insidePart(topo, rot, offset, bx, by, z)) behind++;
   }
-  if (!asked || behind < GUSSET.wallShare * asked) {
+  // ...and right at the bottom: the fin's lowest layer is its first, and only a tine
+  // into the side there keeps it from printing in air (`sideTineLevels`)
+  const zFirst = Math.floor(zLo / layerH) * layerH;
+  if (!asked || behind < GUSSET.wallShare * asked
+      || !insidePart(topo, rot, offset, bx, by, zFirst + layerH / 2)) {
     return { ok: false, reason: `the side doesn’t run far enough down for a gusset this long at ${angle}° — reach less far, or start it lower on the side` };
   }
 
@@ -159,33 +163,50 @@ export function gussetAt(w, o, faceIndex, tris, opts) {
   let height = 0;
   for (let k = 0; k < n; k++) height = Math.max(height, top[k][2] - PROP.gap - floors[k][2]);
 
-  // Side tines: one layer each, every GUSSET.tineSpacing up the inner edge, from just
-  // inside the fin's end across the gap into the side (sway.js's tine, kissed).
+  // Side tines: one layer each up the inner edge, from just inside the fin's end
+  // across the gap into the side (sway.js's tine, kissed). Always built, Tines on or
+  // off: the side is all that holds a gusset up until the overhang prints over it.
+  // The first sits in the fin's very first layer and the last in its top layer, so
+  // neither end of the inner edge starts or finishes in air.
+  const tw = SWAY.tineW / 2;
+  const ox = w[0] + nx * u0, oy = w[1] + ny * u0, ax = -nx, ay = -ny;
   let sideTines = 0;
-  if (opts.tines) {
-    const tw = SWAY.tineW / 2;
-    const ox = w[0] + nx * u0, oy = w[1] + ny * u0, ax = -nx, ay = -ny;
-    const zTop = top[0][2] - PROP.gap - PROP.tipH - 0.25;
-    for (let z = zLo + 0.5; z <= zTop + 1e-6; z += GUSSET.tineSpacing) {
-      const bot = Math.round(z / layerH) * layerH, tp = bot + layerH;
-      if (bot < zLo || tp > zTop + layerH) continue;
-      const e = kissEnds(topo, rot, offset, ox, oy, ax, ay, bot, tp,
-                         { half: tw, back: SWAY.tineOverlap, reach: u0 + SWAY.tineReach });
-      if (Math.max(...e.bot, ...e.top) > u0 + SWAY.tineSpanMax) continue;   // a bridge, not a tine
-      const P = (a, b, zz) => [ox + ax * a - ay * b, oy + ay * a + ax * b, zz];
-      const outline = (h) => [[-SWAY.tineOverlap, -tw], [e[h][0], -tw], [e[h][1], tw], [-SWAY.tineOverlap, tw]];
-      const local = [];
-      loftExtrude(outline('bot'), outline('top'), bot, tp, P, local);
-      pushOutward(local, out);
-      sideTines++;
-    }
+  for (const bot of sideTineLevels(zLo, zHi, layerH)) {
+    const tp = bot + layerH;
+    const e = kissEnds(topo, rot, offset, ox, oy, ax, ay, bot, tp,
+                       { half: tw, back: SWAY.tineOverlap, reach: u0 + SWAY.tineReach });
+    if (Math.max(...e.bot, ...e.top) > u0 + SWAY.tineSpanMax) continue;   // a bridge, not a tine
+    const P = (a, b, zz) => [ox + ax * a - ay * b, oy + ay * a + ax * b, zz];
+    const outline = (h) => [[-SWAY.tineOverlap, -tw], [e[h][0], -tw], [e[h][1], tw], [-SWAY.tineOverlap, tw]];
+    const local = [];
+    loftExtrude(outline('bot'), outline('top'), bot, tp, P, local);
+    pushOutward(local, out);
+    sideTines++;
   }
-  // Top tines: the comb every drawn wall gets along its contact line.
+  // Top tines: the comb every drawn wall gets along its contact line, when Tines is
+  // on. Horizontal tines bite sideways, so a sloped underside takes them and a flat
+  // one doesn't (FIN-SPEC, why the tines must be horizontal).
   const tines = opts.tines
     ? emitTines(top, tris, topo, rot, offset, out, tineStepFor(opts.tineDensity ?? 1), undefined, layerH)
     : 0;
 
   return { ok: true, tris: out, reach, height, angle, tines, sideTines, top, floors: floors.map((f) => f[2]) };
+}
+
+/**
+ * The layer cells (their bottoms) the side tines sit in, for an inner edge running
+ * from `zLo` (the fin's lowest point) to `zHi` (its top, under the gap): the cell
+ * holding zLo, the last whole cell under zHi, and as many evenly between as keep
+ * them no more than GUSSET.tineSpacing apart.
+ */
+export function sideTineLevels(zLo, zHi, layerH) {
+  const first = Math.floor(zLo / layerH + 1e-9);
+  const last = Math.floor(zHi / layerH + 1e-9) - 1;
+  if (last <= first) return [first * layerH];
+  const gaps = Math.ceil(((last - first) * layerH) / GUSSET.tineSpacing - 1e-9);
+  const cells = new Set();
+  for (let i = 0; i <= gaps; i++) cells.add(Math.round(first + ((last - first) * i) / gaps));
+  return [...cells].sort((a, b) => a - b).map((c) => c * layerH);
 }
 
 /** Append a closed solid wound outward (positive volume), flipping it if not. */

@@ -72,7 +72,8 @@ Deno.test('gusset: off the L’s upright, it builds under the arm and runs squar
   assertClose(r.reach, 10, 1e-6, 'reach is the second click, measured out from the side');
   // the whole fin sits in x 5..15 (+ its tip), y about the click, under the arm
   const xs = r.tris.map((v) => v[0]);
-  assert(Math.min(...xs) > 5 - 0.01 && Math.max(...xs) < 15 + 0.6, `fin spills out of 5..15: ${Math.min(...xs)}..${Math.max(...xs)}`);
+  // (the side tines kiss the side 0.01 mm deep: kissEnds' default contact)
+  assert(Math.min(...xs) > 5 - 0.05 && Math.max(...xs) < 15 + 0.6, `fin spills out of 5..15: ${Math.min(...xs)}..${Math.max(...xs)}`);
   assert(Math.max(...zs(r.tris)) <= 30 - PROP.gap + 1e-6, 'fin pokes up into the arm');
 });
 
@@ -104,23 +105,77 @@ Deno.test('gusset: watertight, plain and tined', () => {
   }
 });
 
-// The top comb is emitTines', which leaves a FLAT underside to the gap contact (a
-// drawn wall under this arm gets none either), so only the side tines are pinned.
-Deno.test('gusset: Tines ON grips the side, OFF is a plain breakaway fin', () => {
-  const on = build({ tines: true, tineDensity: 1, layerHeight: 0.2 }).r;
-  const off = build({ tines: false }).r;
-  assert(on.ok && off.ok, 'gusset failed to build');
-  assert(on.sideTines >= 3, `too few tines into the side (${on.sideTines})`);
-  assert(!off.sideTines && !off.tines, 'Tines off still emitted tines');
-  // every side tine sits in one layer cell and reaches past the gap into the side
-  const extra = on.tris.slice(off.tris.length);
-  assert(extra.some((v) => v[0] < 5), 'no tine reaches the side at x = 5');
+// The side tines are all that hold a gusset up until the overhang prints over it, so
+// they come whatever the Tines box says; it only adds the top comb. That comb is
+// emitTines', which leaves a FLAT underside to the gap contact (a drawn wall under
+// this arm gets none either).
+Deno.test('gusset: side tines always, Tines box or not; none on top of a flat arm', () => {
+  for (const tines of [true, false]) {
+    const { r } = build({ tines, tineDensity: 1, layerHeight: 0.2 });
+    assert(r.ok, r.reason);
+    assert(r.sideTines >= 3, `tines ${tines}: too few tines into the side (${r.sideTines})`);
+    assert(r.tris.some((v) => v[0] < 5), `tines ${tines}: no tine reaches the side at x = 5`);
+    assert(!r.tines, `tines ${tines}: a flat underside got top tines (${r.tines})`);
+  }
 });
+
+/** The side tines' layer cells, as [bottom, top] z, read off the geometry: every
+ *  vertex past the side (x < 5) belongs to one. */
+function sideCells(r) {
+  const cells = new Map();
+  for (const v of r.tris) {
+    if (v[0] >= 5 - 1e-6) continue;
+    const k = Math.round(v[2] * 1000);
+    cells.set(k, v[2]);
+  }
+  const zs = [...cells.values()].sort((a, b) => a - b);
+  const out = [];
+  for (let i = 0; i + 1 < zs.length; i += 2) out.push([zs[i], zs[i + 1]]);
+  return out;
+}
+
+Deno.test('gusset: a tine in the fin’s first layer and in its top layer, none further than the spacing apart', () => {
+  for (const layerHeight of [0.2, 0.12, 0.28]) {
+    const { r } = build({ layerHeight });
+    assert(r.ok, r.reason);
+    const cells = sideCells(r);
+    const zLo = r.floors[0] + PROP.footGap, zHi = r.top[0][2] - PROP.gap;
+    const [b0, t0] = cells[0];
+    assert(b0 <= zLo + 1e-6 && t0 > zLo, `${layerHeight}: lowest tine ${b0.toFixed(2)}..${t0.toFixed(2)} misses the fin’s bottom at ${zLo.toFixed(2)}`);
+    const [bn, tn] = cells[cells.length - 1];
+    assert(tn <= zHi + 1e-6 && zHi - tn < layerHeight + 1e-6, `${layerHeight}: top tine ends ${tn.toFixed(2)}, the fin’s top is ${zHi.toFixed(2)}`);
+    assert(bn > b0, 'one tine only');
+    for (let i = 1; i < cells.length; i++) {
+      const step = cells[i][0] - cells[i - 1][0];
+      assert(step <= GUSSET.tineSpacing + 1e-6, `${layerHeight}: tines ${step.toFixed(2)}mm apart`);
+      assertClose(cells[i][1] - cells[i][0], layerHeight, 1e-6, 'a tine is one layer tall');
+    }
+  }
+});
+
+Deno.test('gusset: under a SLOPED overhang the top gets the tine comb too', () => {
+  // the arm's underside climbs 26.6 deg from the upright out: steep enough to bite
+  const sloped = [[0, 0], [5, 0], [5, 26], [25, 36], [25, 41], [0, 41]];
+  const topo = lTopo(sloped);
+  const side = faceAt(topo, 5, 1);
+  const opts = { topo, rot: IDENTITY, offset: OFF, tineDensity: 1, layerHeight: 0.2 };
+  const on = gussetAt([5, 10, 18], [15, 10, 31], side, topo.pos, { ...opts, tines: true });
+  const off = gussetAt([5, 10, 18], [15, 10, 31], side, topo.pos, { ...opts, tines: false });
+  assert(on.ok && off.ok, `sloped arm: ${on.reason ?? off.reason}`);
+  assert(on.tines > 0, `no top tines under a sloped overhang (${on.tines})`);
+  assert(!off.tines && off.sideTines === on.sideTines, 'the Tines box should change only the top comb');
+  assert(isClosed(on.tris), 'tined gusset under a sloped arm is not closed');
+});
+
+/** The fin without its side tines: every vertex out from the side (x > 5). */
+const body = (tris, pose = (v) => v) => tris.filter((v) => pose(v)[0] > 5 - 1e-6);
 
 Deno.test('gusset: only tines bite into the part, never the body', () => {
   const { topo, r } = build({ tines: false });
   assert(r.ok, r.reason);
-  assert(insideCount(topo, IDENTITY, OFF, r.tris) === 0, 'the plain body has vertices inside the part');
+  assert(insideCount(topo, IDENTITY, OFF, body(r.tris)) === 0, 'the body has vertices inside the part');
+  // ...and every vertex that does is a side tine's end, in the side's skin
+  for (const v of r.tris) if (v[0] < 5) assert(v[0] > 5 - 0.05, `a vertex ${(5 - v[0]).toFixed(2)}mm into the side`);
 });
 
 Deno.test('gusset: refused off a face that isn’t a side, and past its reach limits', () => {
@@ -152,7 +207,9 @@ Deno.test('gusset: follows the part when it turns (the pose is rot + offset, not
   assertClose(r.reach, flat.reach, 1e-6, 'reach');
   assertClose(r.height, flat.height, 1e-6, 'height');
   assert(r.tris.length === flat.tris.length, `turned gusset has ${r.tris.length} vertices, flat ${flat.tris.length}`);
-  assert(insideCount(topo, rot, off, r.tris) === 0, 'the turned body has vertices inside the part');
+  // back to the part's frame (x, y) -> (y - off.y, -(x - off.x)) to tell body from tines
+  const unpose = ([x, y, z]) => [y - off.y, -(x - off.x), z];
+  assert(insideCount(topo, rot, off, body(r.tris, unpose)) === 0, 'the turned body has vertices inside the part');
 });
 
 Deno.test('gusset: refused where the side stops short of the fin’s underside', () => {

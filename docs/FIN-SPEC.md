@@ -370,9 +370,9 @@ Draw > Gusset, a click on the side, then a click on the overhang.
 | reach | **3–40 mm** out from the side | shorter is a tine; longer is a sail, stand a wall on the plate |
 | outer end | **2 mm** deep under the overhang (at least `minHeight` + `footGap`) | no knife edge at the tip |
 | body | `sweepBetween` run out from the side, its floor line the sloped underside | the part-attached wall's tip, gap and holes, unchanged |
-| side tines | sway's tine (`SWAY.tineW`, one layer, kissed) every **2 mm** up the inner edge, below the tip taper | the side is what holds the fin; sway's tine is the proven side grip |
-| top tines | `emitTines` along the contact line, as a drawn wall | a flat underside gets none, same as a drawn wall |
-| refused | not an upright face (≤ 30° lean); the side doesn't reach ≥ 80 % of the inner edge; the body would enter the part | says why, before the click, in the ghost |
+| side tines | sway's tine (`SWAY.tineW`, one layer, kissed) up the inner edge: one in the fin's **first layer**, one in its **top layer** under the gap, evenly between at most **2 mm** apart; built whether Tines is on or off | the side is all that holds the fin up until the overhang prints over it: its first layer would otherwise start in air |
+| top tines | `emitTines` along the contact line, as a drawn wall, when Tines is on | a horizontal tine bites sideways, so a sloped underside takes them and a flat one gets none, same as a drawn wall |
+| refused | not an upright face (≤ 30° lean); the side doesn't reach ≥ 80 % of the inner edge, or isn't there at its first layer; the body would enter the part | says why, before the click, in the ghost |
 
 ## Joined walls and ties (Full coverage) — `web/fins/fill.js`, `web/prop/ties.js`
 
