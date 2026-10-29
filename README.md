@@ -139,6 +139,9 @@ click cancels. Place as many as you like, side by side.
 - **Side tines, always.** One-layer tines tie the gusset's inner edge to the side, with one
   in its very first layer (so it never starts printing in air), one in its top layer, and
   the rest at most 2 mm apart. They're built even with Tines off.
+
+  ![Side tines along a gusset's inner edge, from its first layer to its top](docs/images/gusset-side-tines.png)
+
 - **Top tines** bite into the overhang when its underside is sloped and Tines is on. A flat
   ceiling gets none (horizontal tines have nothing to bite), so the gusset stops 0.2 mm
   short and the ceiling's first layer bridges onto it, like any other fin.
