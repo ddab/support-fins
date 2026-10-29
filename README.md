@@ -121,7 +121,7 @@ tine spacing — are the printed ones, not estimates.
 Some overhangs have nothing under them but more part, like the arm of an upside-down L.
 A plate fin can't reach it without standing in the way, and the overhang is often too
 far from the bed to be worth a tall wall anyway. A **gusset** comes off the upright side
-instead. It is a wedge-shaped fin whose underside climbs at 50° from the side, so it
+instead. It is a wedge-shaped fin whose underside climbs at 50° from level, so it
 prints without support of its own, and whose top holds up the overhang.
 
 ![Placing a gusset under an upside-down L](docs/images/gusset-place.gif)

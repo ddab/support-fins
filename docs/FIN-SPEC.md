@@ -356,7 +356,9 @@ set the numbers.
 
 ## Gussets (Draw only) — `web/gusset.js`
 
-Prototype, not printed yet. Under an upside-down L every other support hangs straight
+Printed once: a 25 × 20 × 35 mm upside-down L at default settings (2026-10-28) printed
+clean, the gusset holding the arm. The angle, gap and tine spacing are starting values,
+not tuned from a coupon. Under an upside-down L every other support hangs straight
 down to the plate, though the L's own upright is right there. A gusset stands off the
 upright instead: a vertical triangle square off the side, tined to it at the gap, its top
 the usual tip under the overhang, its underside climbing out from the side steeply

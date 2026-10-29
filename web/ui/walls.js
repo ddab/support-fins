@@ -7,7 +7,7 @@ import { t, tn } from './i18n.js';
  */
 import * as THREE from 'three';
 import { drawnWall } from '../draw.js';
-import { gussetAt, gussetDir, sideNormal } from '../gusset.js';
+import { GUSSET, gussetAt, gussetDir, sideNormal } from '../gusset.js';
 import { arcThrough, arcStations } from '../drawarc.js';
 import { planGrid } from '../fins/tall.js';
 import { swayAtFace, faceIsUpright } from '../sway.js';
@@ -656,7 +656,7 @@ export function syncDrawControls() {
   el('draw-hint').hidden = el('draw-shape').hidden = !drawActive();
   for (const b of el('draw-shape').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.shape === drawShape));
   el('draw-hint').innerHTML = drawShape === 'gusset'
-    ? t('Click a side of the part under an overhang, then the point on the overhang the gusset should reach out to. It runs square off the side, its underside climbing at 50° so nothing under it touches the plate. Backspace takes back the side; Esc or right-click cancels.')
+    ? t('Click a side of the part under an overhang, then the point on the overhang the gusset should reach out to. It runs square off the side, its underside climbing at {angle}° so nothing under it touches the plate. Backspace takes back the side; Esc or right-click cancels.', { angle: GUSSET.angle })
     : drawShape === 'curve'
     ? t('Click the two ends of a curved wall on the red faces, then a point it runs through — out past the ends for a bigger arc. Ends snap to another wall’s end, so two curves close a ring. Backspace takes back a point; Esc or right-click cancels.')
     : t('Click two points across an overhang — straight onto the red faces — to lay a breakaway wall along that line. Hover an upright side to preview a sway brace: its top follows the cursor, and near the top of the side it runs full height. Click to stand it. Esc or right-click cancels.');
