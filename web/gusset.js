@@ -28,7 +28,7 @@
  *
  * Placement is by hand only (Draw > Gusset): a click on the side, then a click on the
  * overhang it should reach. The fin runs square off the side (the clicked face's
- * normal); the second click only sets how far it reaches.
+ * normal, which the placed gusset keeps); the second click only sets how far it reaches.
  */
 import { insidePart } from './inside.js';
 import { kissEnds } from './kiss.js';
@@ -51,13 +51,23 @@ export const GUSSET = {
   maxUpright: 30,     // deg: the clicked face may lean no further than this from upright
 };
 
-/** The clicked face's outward normal, levelled: the way the fin runs. Null when the
- *  face isn't a side (a floor, a roof, or leaning past GUSSET.maxUpright). */
-export function gussetDir(topo, rot, faceIndex) {
-  const i = faceIndex * 3, n = topo.nrm;
-  const x = rot[0] * n[i] + rot[3] * n[i + 1] + rot[6] * n[i + 2];
-  const y = rot[1] * n[i] + rot[4] * n[i + 1] + rot[7] * n[i + 2];
-  const z = rot[2] * n[i] + rot[5] * n[i + 1] + rot[8] * n[i + 2];
+/** The side's outward normal in part coordinates: `side` is a face index (the click),
+ *  or the normal itself, as a placed gusset keeps it -- a reopened session finds faces
+ *  by nearest point, and a point on the side's top edge is as near the arm's underside. */
+export function sideNormal(topo, side) {
+  if (typeof side !== 'number') return side;
+  const i = side * 3, n = topo.nrm;
+  return [n[i], n[i + 1], n[i + 2]];
+}
+
+/** The side's outward normal (`side`: as `sideNormal`), turned to the pose and levelled:
+ *  the way the fin runs. Null when it isn't a side (a floor, a roof, or leaning past
+ *  GUSSET.maxUpright). */
+export function gussetDir(topo, rot, side) {
+  const n = sideNormal(topo, side);
+  const x = rot[0] * n[0] + rot[3] * n[1] + rot[6] * n[2];
+  const y = rot[1] * n[0] + rot[4] * n[1] + rot[7] * n[2];
+  const z = rot[2] * n[0] + rot[5] * n[1] + rot[8] * n[2];
   const h = Math.hypot(x, y);
   if (h < 1e-6 || Math.abs(z) > Math.sin((GUSSET.maxUpright * Math.PI) / 180)) return null;
   return [x / h, y / h];
@@ -74,17 +84,17 @@ function undersideAt(tris, x, y, zMin) {
 }
 
 /**
- * The gusset off the side at `w` (print space, a point on face `faceIndex`) out to the
- * overhang at `o`. `tris`: the part in print space; `opts`: { topo, rot, offset,
+ * The gusset off the side at `w` (print space, a point on the side `side`: its face
+ * index or its normal, as `sideNormal`) out to the overhang at `o`. `tris`: the part in print space; `opts`: { topo, rot, offset,
  * angle?, tines?, tineDensity?, layerHeight? } (topo, rot and offset are required:
  * the side and the clearance are checked against the solid).
  *
  * Returns { ok: true, tris, reach, height, tines, sideTines, top, floors } or
  * { ok: false, reason }.
  */
-export function gussetAt(w, o, faceIndex, tris, opts) {
+export function gussetAt(w, o, side, tris, opts) {
   const { topo, rot, offset } = opts;
-  const dir = gussetDir(topo, rot, faceIndex);
+  const dir = gussetDir(topo, rot, side);
   if (!dir) return { ok: false, reason: 'start a gusset on a side of the part — an upright face under the overhang' };
   const [nx, ny] = dir;
   const reach = (o[0] - w[0]) * nx + (o[1] - w[1]) * ny;

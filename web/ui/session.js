@@ -52,13 +52,15 @@ export function sessionOf(partTris, model = liveModel()) {
     round(r[1] * v.x + r[4] * v.y + r[7] * v.z + o.y - centre[1]),
     round(r[2] * v.x + r[5] * v.y + r[8] * v.z + o.z - centre[2]),
   ];
+  // a direction turns with the part but doesn't move with it
+  const dir = (n) => [0, 1, 2].map((k) => round(r[k] * n[0] + r[k + 3] * n[1] + r[k + 6] * n[2]));
   return {
     v: 1,
     part: { size: size.map(round) },
     finMode: model.finMode, finsVisible: model.finsVisible,
     form: model.form,
     walls: model.walls.map((d) => d.kind === 'sway' ? { kind: 'sway', a: at(d.a), ...(d.capped ? { capped: true } : {}) }
-                                    : d.kind === 'gusset' ? { kind: 'gusset', a: at(d.a), b: at(d.b) }
+                                    : d.kind === 'gusset' ? { kind: 'gusset', a: at(d.a), b: at(d.b), n: dir(d.n) }
                                     : { a: at(d.a), b: at(d.b), ...(d.m ? { m: at(d.m) } : {}) }),
     removed: [...model.removed],
   };
@@ -105,7 +107,7 @@ function readable(s) {
   if (s.finsVisible !== undefined && typeof s.finsVisible !== 'boolean') return false;
   if (s.removed !== undefined && !(Array.isArray(s.removed) && s.removed.every((x) => typeof x === 'string'))) return false;
   return Array.isArray(s.walls ?? []) && (s.walls ?? []).every((w) =>
-    w && point(w.a) && (w.kind === 'sway' || (w.kind === 'gusset' && point(w.b)) || (w.kind === undefined && point(w.b) && (w.m === undefined || point(w.m)))));
+    w && point(w.a) && (w.kind === 'sway' || (w.kind === 'gusset' && point(w.b) && point(w.n)) || (w.kind === undefined && point(w.b) && (w.m === undefined || point(w.m)))));
 }
 
 /** The saved settings each field can take. One it can't -- a number field left
@@ -142,8 +144,10 @@ export function restoreSession(s, beside = false) {
       // a brace saved before the clicked-height cap ran up the whole face: it still does
       walls.push({ kind: 'sway', face: nearestFace(a), a, capped: w.capped === true, ok: false, info: null });
     } else if (w.kind === 'gusset') {
-      const a = vec(w.a);
-      walls.push({ kind: 'gusset', face: nearestFace(a), a, b: vec(w.b), ok: false, info: null });
+      // its side by the saved normal: nearestFace(a) can pick the arm's underside, as
+      // near a point on the side's top edge (the part comes back unturned, so print
+      // space is the part's own)
+      walls.push({ kind: 'gusset', n: [...w.n], a: vec(w.a), b: vec(w.b), ok: false, info: null });
     } else walls.push({ a: vec(w.a), b: vec(w.b), ...(w.m ? { m: vec(w.m) } : {}), ok: false, info: null });
   }
   restoreState({

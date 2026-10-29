@@ -7,7 +7,7 @@ import { t } from './i18n.js';
  */
 import * as THREE from 'three';
 import { drawnWall } from '../draw.js';
-import { gussetAt, gussetDir } from '../gusset.js';
+import { gussetAt, gussetDir, sideNormal } from '../gusset.js';
 import { arcThrough, arcStations } from '../drawarc.js';
 import { planGrid } from '../fins/tall.js';
 import { swayAtFace, faceIsUpright } from '../sway.js';
@@ -317,12 +317,12 @@ export function sweepDrawn({ topology, res, rot, tris, walls, toWorld, auto: bui
       continue;
     }
     if (w.kind === 'gusset') {
-      // A gusset: re-stood off the same side face, out to the same overhang point,
-      // so it follows the part when it turns (and says why when that face no longer
-      // stands upright under an overhang).
+      // A gusset: re-stood off the same side (its kept normal), out to the same
+      // overhang point, so it follows the part when it turns (and says why when that
+      // side no longer stands upright under an overhang).
       toWorld(w.a, wa);
       toWorld(w.b, wb);
-      const r = gussetAt(toArr(wa), toArr(wb), w.face, tris, drawOpts);
+      const r = gussetAt(toArr(wa), toArr(wb), w.n, tris, drawOpts);
       w.ok = r.ok;
       w.info = r;
       if (r.ok) for (const t of r.tris) out.push(t);
@@ -503,7 +503,8 @@ function placeGusset(bWorld) {
   }
   drawMsg = '';
   histPush();
-  drawnWalls.push({ kind: 'gusset', face: drawFace, a: drawStart.clone(), b: part.worldToLocal(bWorld.clone()) });
+  drawnWalls.push({ kind: 'gusset', n: sideNormal(topology, drawFace), a: drawStart.clone(),
+                   b: part.worldToLocal(bWorld.clone()) });
   clearPreview();
   rebuildDrawn();
   updateReadout(lastBuilt);

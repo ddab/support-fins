@@ -224,3 +224,28 @@ Deno.test('gusset: refused where the side stops short of the fin’s underside',
   const ok = gussetAt([5, 10, 27], [8, 10, 30], side, topo.pos, { topo, rot: IDENTITY, offset: OFF });
   assert(ok.ok, `3 mm fin on the boss: ${ok.reason}`);
 });
+
+Deno.test('gusset: a kept side normal builds the same gusset as the clicked face, even at the side’s top edge', () => {
+  const topo = lTopo();
+  const side = faceAt(topo, 5, 1);
+  const opts = { topo, rot: IDENTITY, offset: OFF };
+  const byFace = gussetAt([5, 10, 20], [15, 10, 30], side, topo.pos, opts);
+  const byNormal = gussetAt([5, 10, 20], [15, 10, 30], [1, 0, 0], topo.pos, opts);
+  assert(byFace.ok && byNormal.ok, 'built both ways');
+  assert(JSON.stringify(byFace.tris) === JSON.stringify(byNormal.tris), 'the normal stands the same gusset');
+  // a click a hair under the arm is as near the arm's underside as the side, once the
+  // saved point is rounded: a reopened session looking the face up by nearest point
+  // can take the underside and be refused, the kept normal still stands it off the side
+  const under = topo.nrm.findIndex((v, i) => i % 3 === 2 && v < -0.99) / 3;
+  assert(!gussetAt([5, 10, 29.99], [15, 10, 30], under, topo.pos, opts).ok, 'the underside is no side');
+  assert(gussetAt([5, 10, 29.99], [15, 10, 30], [1, 0, 0], topo.pos, opts).ok, 'built from the kept normal');
+});
+
+Deno.test('gusset: a turned pose turns the kept normal with it', () => {
+  // 90 deg about z: the side's +x normal faces +y in print space
+  const rot = [0, 1, 0, -1, 0, 0, 0, 0, 1];
+  const d = gussetDir(null, rot, [1, 0, 0]);
+  assertClose(d[0], 0, 1e-9, 'x');
+  assertClose(d[1], 1, 1e-9, 'y');
+  assert(gussetDir(null, IDENTITY, [0, 0, -1]) === null, 'a downward normal is no side');
+});
