@@ -211,10 +211,11 @@ function updateDrawReadout(built, ms) {
 
   const ok = drawnWalls.filter((w) => w.ok);
   const bad = drawnWalls.length - ok.length;
-  const tines = ok.reduce((a, w) => a + (w.info?.tines ?? 0) + (w.info?.sideTines ?? 0), 0);
+  const tines = ok.reduce((a, w) => a + (w.info?.tines ?? 0), 0);
   const braces = ok.filter((w) => w.kind === 'sway').length;
   const gussets = ok.filter((w) => w.kind === 'gusset').length;
   const walls = ok.length - braces - gussets;
+  // a gusset's side tines are built with Tines off too: counted on their own
   const sideTines = ok.reduce((a, w) => a + (w.info?.sideTines ?? 0), 0);
   const ribs = ok.reduce((a, w) => a + (w.kind === 'sway' ? 0 : w.info?.braces ?? 0), 0);
   const crosses = ok.reduce((a, w) => a + (w.kind === 'sway' ? w.info?.cross ?? 0 : 0), 0);
@@ -222,7 +223,8 @@ function updateDrawReadout(built, ms) {
   if (walls) parts.push(tn('{n} drawn wall', '{n} drawn walls', walls) + (ribs ? ` · ${tn('{n} wall rib', '{n} wall ribs', ribs)}` : ''));
   if (braces) parts.push(tn('{n} sway brace', '{n} sway braces', braces)
     + (crosses ? ` · ${tn('{n} brace rib', '{n} brace ribs', crosses)}` : ''));
-  if (gussets) parts.push(tn('{n} gusset', '{n} gussets', gussets));
+  if (gussets) parts.push(tn('{n} gusset', '{n} gussets', gussets)
+    + (sideTines ? ` · ${tn('{n} side tine', '{n} side tines', sideTines)}` : ''));
   box.textContent = ok.length
     ? parts.join(' + ') + (tines ? ` · ${tineCount(tines)}` : '')
     : t('none yet');

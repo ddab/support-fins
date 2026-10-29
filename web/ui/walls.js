@@ -1,4 +1,4 @@
-import { t } from './i18n.js';
+import { t, tn } from './i18n.js';
 /**
  * Hand-placed supports: the breakaway walls drawn in Draw mode (or the Suggest
  * "+ Add" augment) and sway braces stood with one click, their preview markers,
@@ -389,8 +389,8 @@ export function selectedNote() {
     : selectedWall.kind === 'gusset'
       ? t('gusset {mm}mm out from the side', { mm: Math.round(i.reach ?? 0) })
       : t('wall {mm}mm long', { mm: Math.round(i.length ?? 0) });
-  const nTines = (i.tines ?? 0) + (i.sideTines ?? 0);
-  const tines = nTines ? `, ${t('{n} tines', { n: nTines })}` : '';
+  const tines = (i.tines ? `, ${t('{n} tines', { n: i.tines })}` : '')
+    + (i.sideTines ? `, ${tn('{n} side tine', '{n} side tines', i.sideTines)}` : '');
   return t('selected: {what}{tines}. Press Delete or Remove selected to take it out (Esc to keep it)', { what, tines });
 }
 
