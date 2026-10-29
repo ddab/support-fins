@@ -263,7 +263,7 @@ function updateDrawReadout(built, ms) {
   }
   if (bad) {
     const one = drawnWalls.find((w) => !w.ok);
-    const reason = one?.info?.reason ? ` (${t(one.info.reason)})` : '';
+    const reason = one?.info?.reason ? ` (${t(one.info.why ?? one.info.reason, one.info.params)})` : '';
     lead.push(tn('{n} wall couldn’t build here{reason}. Undo, or redraw',
                  '{n} walls couldn’t build here{reason}. Undo, or redraw', bad, { reason }));
   }
@@ -408,7 +408,7 @@ function updateFinReadout(built, ms) {
     const bad = drawnWalls.length - drawnOk;
     if (bad) {
       const one = drawnWalls.find((w) => !w.ok);
-      const reason = one?.info?.reason ? ` (${t(one.info.reason)})` : '';
+      const reason = one?.info?.reason ? ` (${t(one.info.why ?? one.info.reason, one.info.params)})` : '';
       lead.push(tn('{n} drawn wall couldn’t attach here{reason}', '{n} drawn walls couldn’t attach here{reason}', bad, { reason }));
     }
     if (drawMsg) lead.push(drawMsg);

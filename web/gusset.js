@@ -90,7 +90,8 @@ function undersideAt(tris, x, y, zMin) {
  * the side and the clearance are checked against the solid).
  *
  * Returns { ok: true, tris, reach, height, tines, sideTines, top, floors } or
- * { ok: false, reason }.
+ * { ok: false, reason, why, params }: `reason` in English, `why` the same with its
+ * numbers as {placeholders} and `params` those numbers, for the UI to translate.
  */
 export function gussetAt(w, o, side, tris, opts) {
   const { topo, rot, offset } = opts;
@@ -99,10 +100,12 @@ export function gussetAt(w, o, side, tris, opts) {
   const [nx, ny] = dir;
   const reach = (o[0] - w[0]) * nx + (o[1] - w[1]) * ny;
   if (reach < GUSSET.minReach) {
-    return { ok: false, reason: `gusset too short — reaches ${Math.max(0, reach).toFixed(1)}mm out from the side, needs ${GUSSET.minReach}mm` };
+    return refused('gusset too short — reaches {reach}mm out from the side, needs {min}mm',
+                   { reach: Math.max(0, reach).toFixed(1), min: GUSSET.minReach });
   }
   if (reach > GUSSET.maxReach) {
-    return { ok: false, reason: `gusset too long — ${reach.toFixed(0)}mm out from the side, at most ${GUSSET.maxReach}mm; stand a wall on the plate instead` };
+    return refused('gusset too long — {reach}mm out from the side, at most {max}mm; stand a wall on the plate instead',
+                   { reach: reach.toFixed(0), max: GUSSET.maxReach });
   }
   const angle = Math.max(GUSSET.minAngle, Number.isFinite(opts.angle) ? opts.angle : GUSSET.angle);
   const slope = Math.tan((angle * Math.PI) / 180);
@@ -146,7 +149,8 @@ export function gussetAt(w, o, side, tris, opts) {
   const zFirst = Math.floor(zLo / layerH) * layerH;
   if (!asked || behind < GUSSET.wallShare * asked
       || !insidePart(topo, rot, offset, bx, by, zFirst + layerH / 2)) {
-    return { ok: false, reason: `the side doesn’t run far enough down for a gusset this long at ${angle}° — reach less far, or start it lower on the side` };
+    return refused('the side doesn’t run far enough down for a gusset this long at {angle}° — reach less far, or start it lower on the side',
+                   { angle });
   }
 
   // The body must stay out of the part everywhere but its contacts: through its
@@ -217,6 +221,12 @@ export function sideTineLevels(zLo, zHi, layerH) {
   const cells = new Set();
   for (let i = 0; i <= gaps; i++) cells.add(Math.round(first + ((last - first) * i) / gaps));
   return [...cells].sort((a, b) => a - b).map((c) => c * layerH);
+}
+
+/** A refusal whose reason carries numbers: `why` with them filled in as `reason`. */
+function refused(why, params) {
+  const reason = why.replace(/{(\w+)}/g, (_, k) => String(params[k]));
+  return { ok: false, reason, why, params };
 }
 
 /** Append a closed solid wound outward (positive volume), flipping it if not. */

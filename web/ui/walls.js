@@ -177,6 +177,9 @@ export function undoDrawPoint() {
   return true;
 }
 
+/** A refused gusset's reason in the page's language (its numbers kept out of the key). */
+const gussetWhy = (r) => t(r.why ?? r.reason, r.params);
+
 /** The band's points: the straight line, or a curve's arc ending at the cursor. */
 function setBand(pts) {
   const pos = bandGeom.attributes.position, n = Math.min(pts.length, BAND_MAX);
@@ -448,7 +451,7 @@ function updatePreview(hitPoint) {
       const r = gussetAt([ga.x, ga.y, ga.z], [gb.x, gb.y, gb.z], drawFace, tris,
                          { topo: topology, rot: rotM3.elements, offset: lastResult.offset });
       if (r.ok) { ghostMesh = meshFrom(r.tris, ghostMaterial); ghostMesh?.layers.disable(MODEL); }
-      showGhostMsg(r.ok ? '' : r.reason, 'gusset');
+      showGhostMsg(r.ok ? '' : gussetWhy(r), 'gusset');
       return;
     }
     const r = drawnWall([ga.x, ga.y, ga.z], [gb.x, gb.y, gb.z], tris, 0,
@@ -498,7 +501,7 @@ function placeGusset(bWorld) {
                      partPrintTriangles(), { topo: topology, rot: rotM3.elements, offset: lastResult.offset });
   if (!r.ok) {
     // keep the side: the next click tries another reach
-    showGhostMsg(r.reason, 'gusset');
+    showGhostMsg(gussetWhy(r), 'gusset');
     return;
   }
   drawMsg = '';
