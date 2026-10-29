@@ -45,7 +45,8 @@ engine is validated against third-party STLs and pinned by an offline test suite
 Working: overhang detection, bed-reachability, contoured breakaway fin walls, orientation +
 load-direction scoring, the combined fin (wall + tines that fuse into the part — the whole
 point; see `docs/FIN-SPEC.md`), optional sway braces that tie tall parts' sides on all
-the way up (auto, or click an upright side in Draw), STL, 3MF, STEP and OBJ import, STL and 3MF export.
+the way up (auto, or click an upright side in Draw), hand-placed gussets that stand off
+an upright side to hold up an overhang above it, STL, 3MF, STEP and OBJ import, STL and 3MF export.
 
 Still open: scale-aware fin profiles, and the bed pad on tilted exports.
 
@@ -114,6 +115,45 @@ braces"); the code is `web/sway.js`, and `tests/sway.test.js` pins its behaviour
 (about 20 g of support) and hand-placed braces follow its gable up to 225 mm. Two test
 prints (2026-09-22) both came out clean, so the defaults below — depth, thickness and
 tine spacing — are the printed ones, not estimates.
+
+### Gussets: fins off a side of the part
+
+Some overhangs have nothing under them but more part, like the arm of an upside-down L.
+A plate fin can't reach it without standing in the way, and the overhang is often too
+far from the bed to be worth a tall wall anyway. A **gusset** comes off the upright side
+instead. It is a wedge-shaped fin whose underside climbs at 50° from the side, so it
+prints without support of its own, and whose top holds up the overhang.
+
+![Placing a gusset under an upside-down L](docs/images/gusset-place.gif)
+
+**Using it:** in **Draw**, pick **Gusset** (next to Line and Curve). Click the upright side
+under the overhang, then click the point on the overhang the gusset should reach out to.
+It always runs square off the side. The second click only sets how far it reaches, and the
+preview shows it before you commit. Backspace takes back the first click; Esc or a right
+click cancels. Place as many as you like, side by side.
+
+![Two gussets holding up the arm of an upside-down L](docs/images/gusset-app.png)
+
+**How it holds on:**
+
+- **Side tines, always.** One-layer tines tie the gusset's inner edge to the side, with one
+  in its very first layer (so it never starts printing in air), one in its top layer, and
+  the rest at most 2 mm apart. They're built even with Tines off.
+- **Top tines** bite into the overhang when its underside is sloped and Tines is on. A flat
+  ceiling gets none (horizontal tines have nothing to bite), so the gusset stops 0.2 mm
+  short and the ceiling's first layer bridges onto it, like any other fin.
+- Like every support here, it stands off the part by the breakaway gap, and only the
+  tines touch it.
+
+A gusset is refused, with the reason, if the side isn't solid where its tines go, if the
+reach is too short, or if it would run into the part.
+
+![The printed L with its gusset still attached](docs/images/gusset-print.jpg)
+
+**Status: printed once.** Tested on a 25 × 20 × 35 mm upside-down L (2026-10-28) with
+default settings. The angle, gap and tine spacing are the starting values, not tuned
+from prints yet. The numbers and reasoning are in `docs/FIN-SPEC.md` ("Gussets"), the
+code is `web/gusset.js`, and `tests/gusset.test.js` pins its behaviour.
 
 ### The "no config, geometry only" notice
 
@@ -197,8 +237,8 @@ which would stretch the one-layer tines. Confirmed working in PrusaSlicer 3.0 al
 
 ## Honest limitations
 
-- Overhangs sitting over the _part_ rather than the plate aren't handled — fins attach to
-  the bed only.
+- Overhangs sitting over the _part_ rather than the plate aren't handled automatically.
+  Fins attach to the bed, and a gusset off an upright side has to be placed by hand.
 - Features shorter than roughly a 4 mm wall height are too short for a real fin.
 - It won't pick your orientation for you. On purpose.
 
