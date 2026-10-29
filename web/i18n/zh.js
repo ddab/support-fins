@@ -267,6 +267,7 @@ export default {
   "nothing overhangs there — the gusset has to run out under the overhang": "那里没有悬垂 —— 角撑必须伸到悬垂下方",
   "the side doesn’t run far enough down for a gusset this long at {angle}° — reach less far, or start it lower on the side": "以 {angle}° 计，侧面向下延伸不够，撑不住这么长的角撑 —— 请伸得短一些，或从侧面更低处开始",
   "the gusset runs into the part — start it where the side is flat and clear out to the overhang": "角撑会穿入零件 —— 请从侧面平整、到悬垂之间无遮挡的位置开始",
+  "the gusset would fuse with a support already standing there — place it clear of that support": "角撑会与那里已有的支撑熔成一体 —— 请放在远离该支撑的位置",
   "too little room under the overhang there for a gusset": "那里悬垂下方的空间太小，放不下角撑",
   "{n} pins": { other: "{n} 根插针" },
   "{n} pin": { other: "{n} 根插针" },

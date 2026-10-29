@@ -30,9 +30,11 @@
  * overhang it should reach. The fin runs square off the side (the clicked face's
  * normal, which the placed gusset keeps); the second click only sets how far it reaches.
  */
-import { insidePart } from './inside.js';
+import { insidePart, solidClearance } from './inside.js';
 import { kissEnds } from './kiss.js';
 import { PROP, emitTines, tineStepFor, crestOn, crestPart } from './prop.js';
+import { clearBetween, trimmedEnds } from './prop/attached.js';
+import { welds } from './prop/clearance.js';
 import { surfaceHitsAt } from './prop/surface.js';
 import { sweepBetween } from './prop/sweep.js';
 import { loftExtrude } from './solids.js';
@@ -47,7 +49,6 @@ export const GUSSET = {
   wallProbe: 0.5,     // mm into the side: where "is the side solid here?" is asked
   wallShare: 0.8,     // ...and how much of the fin's inner edge must have side behind it
   tineSpacing: 2,     // mm between side tines up the inner edge
-  clearStep: 0.5,     // mm: the body's part-clearance sampled this finely
   maxUpright: 30,     // deg: the clicked face may lean no further than this from upright
 };
 
@@ -86,8 +87,9 @@ function undersideAt(tris, x, y, zMin) {
 /**
  * The gusset off the side at `w` (print space, a point on the side `side`: its face
  * index or its normal, as `sideNormal`) out to the overhang at `o`. `tris`: the part in print space; `opts`: { topo, rot, offset,
- * angle?, tines?, tineDensity?, layerHeight? } (topo, rot and offset are required:
- * the side and the clearance are checked against the solid).
+ * angle?, tines?, tineDensity?, layerHeight?, supports? } (topo, rot and offset are required:
+ * the side and the clearance are checked against the solid). `supports`: the other
+ * supports standing, as fins/fill.js's boxGrid, for the gusset to keep PROP.sideClear off.
  *
  * Returns { ok: true, tris, reach, height, tines, sideTines, top, floors } or
  * { ok: false, reason, why, params }: `reason` in English, `why` the same with its
@@ -111,12 +113,14 @@ export function gussetAt(w, o, side, tris, opts) {
   const slope = Math.tan((angle * Math.PI) / 180);
   const layerH = opts.layerHeight ?? PROP.tineH;
 
-  // Stations out from the side: the first at the gap (the inner end stands off the
-  // side, the tines bridge it), then every stationStep to the clicked reach.
-  const u0 = PROP.gap, u1 = reach;
+  // Stations out from the side: the first at sideClear (the inner end stands off the
+  // side as a flank must -- `welds` fails one closer than 0.205 -- and the tines bridge
+  // it), then every stationStep to the clicked reach.
+  const u0 = PROP.sideClear;
+  let u1 = reach;
   const n = Math.max(PROP.minStations, Math.ceil((u1 - u0) / PROP.stationStep) + 1);
   const at = (u) => [w[0] + nx * u, w[1] + ny * u];
-  const top = [];
+  let top = [];
   for (let k = 0; k < n; k++) {
     const u = u0 + ((u1 - u0) * k) / (n - 1);
     const [x, y] = at(u);
@@ -129,11 +133,27 @@ export function gussetAt(w, o, side, tris, opts) {
   // tip. A station whose underside would sink under the plate stands on it instead
   // (sweepBetween's floor of 0): a fin that long off a side that low is half a wall.
   const zEnd = top[n - 1][2] - PROP.gap - Math.max(GUSSET.endDepth, PROP.minHeight + PROP.footGap + 0.1);
-  const floors = top.map((p, k) => {
+  let floors = top.map((p, k) => {
     const u = u0 + ((u1 - u0) * k) / (n - 1);
     const z = zEnd - (u1 - u) * slope;
     return [p[0], p[1], z < 0.5 ? 0 : z];
   });
+
+  // The body keeps clear of the part the way a drawn part wall does (draw.js): its ends
+  // trimmed while clearBetween refuses them (trimmedEnds), then every station kept
+  // checked. The outer end may come in -- a lip hanging off the overhang shortens the
+  // reach -- but the inner end is what the side tines hold, so it may not move.
+  const keep = trimmedEnds(top, floors, topo, rot, offset);
+  if (!keep || keep[0] > 0) return intoPart();
+  if (keep[1] < n) {
+    top = top.slice(0, keep[1]);
+    floors = floors.slice(0, keep[1]);
+    u1 = u0 + ((u1 - u0) * (keep[1] - 1)) / (n - 1);
+    if (u1 < GUSSET.minReach) return intoPart();
+  }
+  for (let k = 1; k < top.length - 1; k++) {
+    if (!clearBetween(top, floors, k, topo, rot, offset)) return intoPart();
+  }
 
   // The side has to be there behind the inner edge, all the way down it: an L whose
   // upright stops short (or a click past the side's end) leaves the fin hanging.
@@ -153,29 +173,18 @@ export function gussetAt(w, o, side, tris, opts) {
                    { angle });
   }
 
-  // The body must stay out of the part everywhere but its contacts: through its
-  // middle and both faces, strictly between its floor and its top.
-  const half = PROP.th / 2;
-  for (let k = 0; k < n; k++) {
-    const [x, y, zt] = top[k];
-    const zb = floors[k][2] + (floors[k][2] > 0 ? PROP.footGap : 0);
-    for (const s of [-half, 0, half]) {
-      const px = x - ny * s, py = y + nx * s;
-      for (let z = zb + 0.1; z < zt - PROP.gap - 0.1; z += GUSSET.clearStep) {
-        if (insidePart(topo, rot, offset, px, py, z)) {
-          return { ok: false, reason: 'the gusset runs into the part — start it where the side is flat and clear out to the overhang' };
-        }
-      }
-    }
-  }
-
   const out = [];
   if (crestOn()) crestPart(tris, layerH);
   if (!sweepBetween(top, floors, out, PROP.minHeightSquat)) {
     return { ok: false, reason: 'too little room under the overhang there for a gusset' };
   }
+  // ...and then the swept body is MEASURED against the whole part, as Auto's walls are
+  // (prop.js): the stations above are a mm apart, and a rib thinner than that between
+  // two of them is seen only by the solid's own triangles (solidClearance).
+  const hit = solidClearance(topo, rot, offset, out, 0.25);
+  if (hit && welds(hit)) return intoPart();
   let height = 0;
-  for (let k = 0; k < n; k++) height = Math.max(height, top[k][2] - PROP.gap - floors[k][2]);
+  for (let k = 0; k < top.length; k++) height = Math.max(height, top[k][2] - PROP.gap - floors[k][2]);
 
   // Side tines: one layer each up the inner edge, from just inside the fin's end
   // across the gap into the side (sway.js's tine, kissed). Always built, Tines on or
@@ -203,8 +212,20 @@ export function gussetAt(w, o, side, tris, opts) {
   const tines = opts.tines
     ? emitTines(top, tris, topo, rot, offset, out, tineStepFor(opts.tineDensity ?? 1), undefined, layerH)
     : 0;
+  // Last, the other supports: one standing within sideClear -- an Auto wall under the
+  // same arm, a brace on the same side, a wall or gusset placed before -- would fuse
+  // with this one into a piece that doesn't break away (the list drawn walls' ribs keep
+  // clear of, ui/walls.js).
+  if (opts.supports?.hits(out, PROP.sideClear)) {
+    return { ok: false, reason: 'the gusset would fuse with a support already standing there — place it clear of that support' };
+  }
 
-  return { ok: true, tris: out, reach, height, angle, tines, sideTines, top, floors: floors.map((f) => f[2]) };
+  return { ok: true, tris: out, reach: u1, height, angle, tines, sideTines, top, floors: floors.map((f) => f[2]) };
+}
+
+/** The body would cut into the part (or weld to it), wherever it was found. */
+function intoPart() {
+  return { ok: false, reason: 'the gusset runs into the part — start it where the side is flat and clear out to the overhang' };
 }
 
 /**

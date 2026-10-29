@@ -245,6 +245,7 @@ export default {
   "nothing overhangs there — the gusset has to run out under the overhang": "لا يوجد بروز معلّق هناك — يجب أن تمتد الدعامة الركنية إلى ما تحت البروز",
   "the side doesn’t run far enough down for a gusset this long at {angle}° — reach less far, or start it lower on the side": "الجانب لا ينزل بما يكفي لدعامة ركنية بهذا الطول بزاوية {angle}° — قلّل امتدادها، أو ابدأها في موضع أدنى من الجانب",
   "the gusset runs into the part — start it where the side is flat and clear out to the overhang": "الدعامة الركنية تدخل في القطعة — ابدأها حيث يكون الجانب مستويًا وخاليًا حتى البروز",
+  "the gusset would fuse with a support already standing there — place it clear of that support": "ستندمج الدعامة الركنية مع دعامة موجودة هناك بالفعل — ضعها بعيدًا عن تلك الدعامة",
   "too little room under the overhang there for a gusset": "المساحة تحت البروز هناك أضيق من أن تتسع لدعامة ركنية",
   "{n} regions": { one: "{n} منطقة", other: "{n} مناطق" },
   "{n} region": { one: "{n} منطقة", other: "{n} مناطق" },

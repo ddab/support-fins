@@ -254,6 +254,7 @@ export default {
   "nothing overhangs there — the gusset has to run out under the overhang": "dort ist kein Überhang — die Seitenstütze muss unter den Überhang reichen",
   "the side doesn’t run far enough down for a gusset this long at {angle}° — reach less far, or start it lower on the side": "die Seite reicht nicht weit genug hinunter für eine so lange Seitenstütze bei {angle}° — weniger weit reichen oder tiefer an der Seite beginnen",
   "the gusset runs into the part — start it where the side is flat and clear out to the overhang": "die Seitenstütze läuft in das Teil — dort beginnen, wo die Seite eben und bis zum Überhang frei ist",
+  "the gusset would fuse with a support already standing there — place it clear of that support": "die Seitenstütze würde mit einer dort schon stehenden Stütze zu einem Stück verschmelzen — mit Abstand zu ihr setzen",
   "too little room under the overhang there for a gusset": "zu wenig Platz unter dem Überhang für eine Seitenstütze",
   "{n} regions": { one: "{n} Bereich", other: "{n} Bereiche" },
   "{n} region": { one: "{n} Bereich", other: "{n} Bereiche" },

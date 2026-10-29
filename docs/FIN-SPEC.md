@@ -360,21 +360,24 @@ Printed once: a 25 × 20 × 35 mm upside-down L at default settings (2026-10-28)
 clean, the gusset holding the arm. The angle, gap and tine spacing are starting values,
 not tuned from a coupon. Under an upside-down L every other support hangs straight
 down to the plate, though the L's own upright is right there. A gusset stands off the
-upright instead: a vertical triangle square off the side, tined to it at the gap, its top
+upright instead: a vertical triangle square off the side, tined to it across a flank's clearance, its top
 the usual tip under the overhang, its underside climbing out from the side steeply
 enough to print unsupported. Nothing under it reaches the plate. Placed by hand only:
 Draw > Gusset, a click on the side, then a click on the overhang.
 
 | feature | value | rationale |
 |---|---|---|
-| direction | the clicked face's normal, levelled; the second click sets only the reach | square off the side, so the inner end sits evenly at the gap |
+| direction | the clicked face's normal, levelled; the second click sets only the reach | square off the side, so the inner end sits evenly off it |
+| inner end | **`PROP.sideClear`** (0.35 mm) off the side | a flank: `welds` fails one closer than 0.205 mm, so the tines bridge it |
 | underside | `GUSSET.angle` (**50°**) from level, never flatter than **45°** | the 45° a printer holds, with margin; a coupon should set it |
 | reach | **3–40 mm** out from the side | shorter is a tine; longer is a sail, stand a wall on the plate |
 | outer end | **2 mm** deep under the overhang (at least `minHeight` + `footGap`) | no knife edge at the tip |
 | body | `sweepBetween` run out from the side, its floor line the sloped underside | the part-attached wall's tip, gap and holes, unchanged |
 | side tines | sway's tine (`SWAY.tineW`, one layer, kissed) up the inner edge: one in the fin's **first layer**, one in its **top layer** under the gap, evenly between at most **2 mm** apart; built whether Tines is on or off | the side is all that holds the fin up until the overhang prints over it: its first layer would otherwise start in air |
 | top tines | `emitTines` along the contact line, as a drawn wall, when Tines is on | a horizontal tine bites sideways, so a sloped underside takes them and a flat one gets none, same as a drawn wall |
-| refused | not an upright face (≤ 30° lean); the side doesn't reach ≥ 80 % of the inner edge, or isn't there at its first layer; the body would enter the part | says why, before the click, in the ghost |
+| clearance | ends trimmed by `trimmedEnds` (the outer end may come in, the inner may not), every station through `clearBetween`, then the swept body measured by `solidClearance` against `welds` | a drawn part wall's checks, plus Auto's exact measure: a rib thinner than the 1 mm station pitch is seen only by the solid |
+| other supports | kept `PROP.sideClear` off Auto's fins on screen and every hand-placed support stood before it (`boxGrid`, in 3D) | two supports that touch fuse into one piece that won't break away; 3D, so the bed pad under a gusset is no clash |
+| refused | not an upright face (≤ 30° lean); the side doesn't reach ≥ 80 % of the inner edge, or isn't there at its first layer; the body would cut into or weld to the part; another support within `sideClear` | says why, before the click, in the ghost |
 
 ## Joined walls and ties (Full coverage) — `web/fins/fill.js`, `web/prop/ties.js`
 

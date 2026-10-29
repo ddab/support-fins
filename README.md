@@ -149,7 +149,8 @@ click cancels. Place as many as you like, side by side.
   tines touch it.
 
 A gusset is refused, with the reason, if the side isn't solid where its tines go, if the
-reach is too short, or if it would run into the part.
+reach is too short, if it would run into the part, or if it would touch another support
+(the two would fuse into one piece).
 
 ![The printed L with its gusset still attached](docs/images/gusset-print.jpg)
 

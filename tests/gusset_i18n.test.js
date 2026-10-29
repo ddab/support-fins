@@ -12,6 +12,7 @@ const KEYS = {
     'the side doesn’t run far enough down for a gusset this long at {angle}° — reach less far, or start it lower on the side',
     'the gusset runs into the part — start it where the side is flat and clear out to the overhang',
     'too little room under the overhang there for a gusset',
+    'the gusset would fuse with a support already standing there — place it clear of that support',
   ],
   'web/index.html': [
     'Gusset',

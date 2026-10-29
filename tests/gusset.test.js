@@ -4,9 +4,10 @@
 // only with Tines on, keeps its underside at least 45 deg, and refuses a start that
 // isn't a side and a reach past its limits.
 
-import { WEB, buildTopology, isClosed, insideCount, assert, assertClose } from './_util.js';
+import { WEB, block, buildTopology, isClosed, insideCount, assert, assertClose } from './_util.js';
 
 const { gussetAt, gussetDir, GUSSET } = await import(`${WEB}gusset.js`);
+const { boxGrid } = await import(`${WEB}fins/fill.js`);
 const { PROP } = await import(`${WEB}prop.js`);
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 const OFF = { x: 0, y: 0, z: 0 };
@@ -90,7 +91,7 @@ Deno.test('gusset: its underside climbs at the angle asked, never flatter than 4
   for (const angle of [50, 60, 30]) {
     const { r } = build({ angle });
     assert(r.ok, `${angle} deg: ${r.reason}`);
-    const f = r.floors, du = r.reach - PROP.gap;
+    const f = r.floors, du = r.reach - PROP.sideClear;   // the inner station stands sideClear off the side
     const got = (Math.atan((f[f.length - 1] - f[0]) / du) * 180) / Math.PI;
     assertClose(got, Math.max(angle, GUSSET.minAngle), 0.01, `underside slope at ${angle} deg`);
   }
@@ -239,6 +240,60 @@ Deno.test('gusset: a kept side normal builds the same gusset as the clicked face
   const under = topo.nrm.findIndex((v, i) => i % 3 === 2 && v < -0.99) / 3;
   assert(!gussetAt([5, 10, 29.99], [15, 10, 30], under, topo.pos, opts).ok, 'the underside is no side');
   assert(gussetAt([5, 10, 29.99], [15, 10, 30], [1, 0, 0], topo.pos, opts).ok, 'built from the kept normal');
+});
+
+/** The L with a block added (a separate closed solid touching it), as a topology. */
+function lWith(...box) {
+  const pos = new Float32Array([...lTopo().pos, ...block(...box)]);
+  return buildTopology({ getAttribute: (k) => (k === 'position' ? { array: pos } : null) });
+}
+const triples = (flat) => { const o = []; for (let i = 0; i < flat.length; i += 3) o.push([flat[i], flat[i + 1], flat[i + 2]]); return o; };
+
+Deno.test('gusset: a rib thinner than the station pitch, between two stations, refuses it', () => {
+  // where the stations fall on the plain L, then a 0.25 mm rib hanging 4 mm off the arm
+  // across the fin, halfway between the 4th and 5th: no station is near enough to see
+  // it, only the swept body's own triangles (solidClearance)
+  const { r: plain } = build();
+  assert(plain.ok, plain.reason);
+  const x = (plain.top[3][0] + plain.top[4][0]) / 2;
+  assert(plain.top[4][0] - plain.top[3][0] > 0.6, 'test setup: stations closer than the rib needs');
+  const topo = lWith(x - 0.125, x + 0.125, 7, 13, 26, 30);
+  const side = faceAt(topo, 5, 1);
+  const r = gussetAt([5, 10, 20], [15, 10, 30], side, topo.pos, { topo, rot: IDENTITY, offset: OFF });
+  assert(!r.ok && /runs into the part/.test(r.reason), `built through the rib: ${r.reason ?? 'ok'}`);
+});
+
+Deno.test('gusset: a lip at the far end trims the reach, not the side; one it runs under refuses it', () => {
+  const at = (topo) => gussetAt([5, 10, 20], [15, 10, 30], faceAt(topo, 5, 1), topo.pos,
+                                { topo, rot: IDENTITY, offset: OFF });
+  // a lip hanging off the arm 0.1 mm past the clicked reach: the last station would
+  // stand flush against it, so the outer end comes in (trimmedEnds) and the inner end
+  // stays on the side
+  const r = at(lWith(15.1, 16, 0, 20, 25, 30));
+  assert(r.ok, `refused: ${r.reason}`);
+  assert(r.reach < 10 - 0.5, `reach ${r.reach.toFixed(2)} still runs to the lip`);
+  assert(Math.max(...r.tris.map((v) => v[0])) < 15.1 - 0.205, 'the body ends within a flank of the lip');
+  assert(r.top[0][0] - 5 < PROP.sideClear + 1e-6, 'the inner end moved off the side');
+  assert(r.sideTines > 0, 'no side tines');
+  // ...a lip across the middle of the fin: its top would step down under the lip with
+  // no station on the step, and only the swept body's measure sees the corner
+  const under = at(lWith(14, 15, 0, 20, 27, 30));
+  assert(!under.ok && /runs into the part/.test(under.reason), `built under the lip: ${under.reason ?? 'ok'}`);
+});
+
+Deno.test('gusset: keeps clear of the supports standing, in 3D', () => {
+  const { r: plain } = build();
+  assert(plain.ok, plain.reason);
+  const grid = (...box) => { const g = boxGrid(); g.add(triples(block(...box))); return g; };
+  // an Auto wall standing from the plate up under the same arm, across the gusset
+  const wall = build({ supports: grid(10, 11, 0, 20, 0, 29.8) }).r;
+  assert(!wall.ok && /fuse/.test(wall.reason), `built into a wall: ${wall.reason ?? 'ok'}`);
+  // ...one at the far end of the part is no clash
+  assert(build({ supports: grid(10, 11, 18, 20, 0, 29.8) }).r.ok, 'refused for a wall 7 mm away');
+  // ...nor the bed pad right under it: the gusset is up the side, not on the plate
+  const pad = build({ supports: grid(5, 25, 0, 20, 0, 0.5) }).r;
+  assert(pad.ok, `refused for the pad below: ${pad.reason}`);
+  assert(JSON.stringify(pad.tris) === JSON.stringify(plain.tris), 'the pad changed the gusset');
 });
 
 Deno.test('gusset: a turned pose turns the kept normal with it', () => {

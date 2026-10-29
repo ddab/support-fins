@@ -252,6 +252,7 @@ export default {
   "nothing overhangs there — the gusset has to run out under the overhang": "daar is geen overhang — de zijsteun moet tot onder de overhang reiken",
   "the side doesn’t run far enough down for a gusset this long at {angle}° — reach less far, or start it lower on the side": "de zijkant loopt niet ver genoeg naar beneden voor een zo lange zijsteun onder {angle}° — reik minder ver, of begin lager op de zijkant",
   "the gusset runs into the part — start it where the side is flat and clear out to the overhang": "de zijsteun loopt het onderdeel in — begin waar de zijkant vlak is en vrij tot aan de overhang",
+  "the gusset would fuse with a support already standing there — place it clear of that support": "de zijsteun zou versmelten met een steun die daar al staat — plaats hem vrij van die steun",
   "too little room under the overhang there for a gusset": "te weinig ruimte onder de overhang daar voor een zijsteun",
 	"{n} regions": { one: "{n} gebied", other: "{n} gebieden" },
 	"{n} region": { one: "{n} gebied", other: "{n} gebieden" },

@@ -235,6 +235,7 @@ export default {
   "nothing overhangs there — the gusset has to run out under the overhang": "não há balanço aí — a mão-francesa tem que chegar até debaixo do balanço",
   "the side doesn’t run far enough down for a gusset this long at {angle}° — reach less far, or start it lower on the side": "a lateral não desce o bastante para uma mão-francesa tão longa a {angle}° — chegue menos longe, ou comece mais abaixo na lateral",
   "the gusset runs into the part — start it where the side is flat and clear out to the overhang": "a mão-francesa entra na peça — comece onde a lateral é plana e livre até o balanço",
+  "the gusset would fuse with a support already standing there — place it clear of that support": "a mão-francesa se fundiria com um suporte que já está ali — coloque-a longe desse suporte",
   "too little room under the overhang there for a gusset": "pouco espaço debaixo do balanço aí para uma mão-francesa",
   "{n} regions": { one: "{n} região", other: "{n} regiões" },
   "{n} region": { one: "{n} região", other: "{n} regiões" },
