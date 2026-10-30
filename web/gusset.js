@@ -43,7 +43,7 @@ import { SWAY } from './sway.js';
 export const GUSSET = {
   angle: 50,          // deg from level, the underside's climb: steeper than the 45 a printer holds
   minAngle: 45,       // ...and a setting may not go flatter than this
-  minReach: 3,        // mm out from the side: shorter than this is a tine, not a fin
+  minReach: 1,        // mm out from the side: shorter than this is a tine, not a fin (a 2 mm lip takes one, to keep it from drooping)
   maxReach: 40,       // mm: past this a gusset is a sail -- stand a wall on the plate
   endDepth: 2,        // mm: the fin's outer end stands this tall under the overhang, not a knife edge
   wallProbe: 0.5,     // mm into the side: where "is the side solid here?" is asked

@@ -370,7 +370,7 @@ Draw > Gusset, a click on the side, then a click on the overhang.
 | direction | the clicked face's normal, levelled; the second click sets only the reach | square off the side, so the inner end sits evenly off it |
 | inner end | **`PROP.sideClear`** (0.35 mm) off the side | a flank: `welds` fails one closer than 0.205 mm, so the tines bridge it |
 | underside | `GUSSET.angle` (**50°**) from level, never flatter than **45°** | the 45° a printer holds, with margin; a coupon should set it |
-| reach | **3–40 mm** out from the side | shorter is a tine; longer is a sail, stand a wall on the plate |
+| reach | **1–40 mm** out from the side | a 2 mm lip droops without one, and its fin past the standoff is still about its own thickness long; shorter is a tine; longer is a sail, stand a wall on the plate |
 | outer end | **2 mm** deep under the overhang (at least `minHeight` + `footGap`) | no knife edge at the tip |
 | body | `sweepBetween` run out from the side, its floor line the sloped underside | the part-attached wall's tip, gap and holes, unchanged |
 | side tines | sway's tine (`SWAY.tineW`, one layer, kissed) up the inner edge: one in the fin's **first layer**, one in its **top layer** under the gap, evenly between at most **2 mm** apart; built whether Tines is on or off | the side is all that holds the fin up until the overhang prints over it: its first layer would otherwise start in air |

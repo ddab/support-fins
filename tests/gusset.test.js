@@ -4,7 +4,7 @@
 // only with Tines on, keeps its underside at least 45 deg, and refuses a start that
 // isn't a side and a reach past its limits.
 
-import { WEB, block, buildTopology, isClosed, insideCount, assert, assertClose } from './_util.js';
+import { WEB, block, buildTopology, loadModel, analyze, isClosed, insideCount, assert, assertClose } from './_util.js';
 
 const { gussetAt, gussetDir, GUSSET } = await import(`${WEB}gusset.js`);
 const { boxGrid } = await import(`${WEB}fins/fill.js`);
@@ -188,8 +188,8 @@ Deno.test('gusset: refused off a face that isn’t a side, and past its reach li
   assert(under >= 0, 'test setup: no underside face');
   assert(!gussetAt([10, 10, 30], [15, 10, 30], under, topo.pos, opts).ok, 'built off the underside');
   const side = faceAt(topo, 5, 1);
-  const short = gussetAt([5, 10, 20], [6, 10, 30], side, topo.pos, opts);
-  assert(!short.ok && /too short/.test(short.reason), `a 1 mm gusset: ${short.reason}`);
+  const short = gussetAt([5, 10, 20], [5.5, 10, 30], side, topo.pos, opts);
+  assert(!short.ok && /too short/.test(short.reason), `a 0.5 mm gusset: ${short.reason}`);
   const past = gussetAt([5, 10, 20], [27, 10, 30], side, topo.pos, opts);
   assert(!past.ok, 'built out past the end of the arm');
 });
@@ -303,4 +303,25 @@ Deno.test('gusset: a turned pose turns the kept normal with it', () => {
   assertClose(d[0], 0, 1e-9, 'x');
   assertClose(d[1], 1, 1e-9, 'y');
   assert(gussetDir(null, IDENTITY, [0, 0, -1]) === null, 'a downward normal is no side');
+});
+
+Deno.test('gusset: under a 2 mm lip, small enough to hold it up', () => {
+  // eyelet_rim.stl: a tube with a 1.93 mm lip round the inside at each end (modelled Y
+  // up), its wall at z = -11.0 at x = 20 in the file's frame: a gusset from the wall out
+  // to anywhere on the outer half of the lip builds, at either end
+  const topo = loadModel('eyelet_rim');
+  const rot = [1, 0, 0, 0, 0, 1, 0, -1, 0];
+  const offset = analyze(topo, 45, rot).offset;
+  const pos = topo.pos, tris = new Float64Array(pos.length);
+  for (let i = 0; i < pos.length; i += 3) {
+    tris[i] = pos[i] + offset.x; tris[i + 1] = -pos[i + 2] + offset.y; tris[i + 2] = pos[i + 1] + offset.z;
+  }
+  const at = (x, y, z) => [x + offset.x, -z + offset.y, y + offset.z];
+  for (const [lip, y, oy] of [['top', 70, 79], ['bottom', -7.9, -5]]) {
+    for (const reach of [1, 1.5, 1.8]) {
+      const r = gussetAt(at(20, y, -11.0), at(20, oy, -11.0 + reach), [0, 0, 1], tris, { topo, rot, offset });
+      assert(r.ok, `${lip} lip, ${reach} mm: ${r.reason}`);
+      assert(r.sideTines >= 2, `${lip} lip, ${reach} mm: ${r.sideTines} side tines`);
+    }
+  }
 });
