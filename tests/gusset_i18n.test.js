@@ -1,4 +1,4 @@
-// Every string a gusset shows (web/gusset.js's refusals, the Draw button, hint and
+// Every string a gusset or hoop shows (web/gusset.js's and web/hoop.js's refusals, the Draw buttons, hints and
 // readout lines) is translated in every locale, its {placeholders} kept. Each key is
 // checked against the source too, so a reworded string can't leave a stale key behind.
 import { assert } from 'jsr:@std/assert';
@@ -14,7 +14,14 @@ const KEYS = {
     'too little room under the overhang there for a gusset',
     'the gusset would fuse with a support already standing there — place it clear of that support',
   ],
+  'web/hoop.js': [
+    'no edge to follow there — click on the overhang the hoop should run round',
+    'the overhang’s edge doesn’t come back to this side — use a gusset instead',
+    'hoop too long — {len}mm round the edge, at most {max}mm',
+  ],
   'web/index.html': [
+    'Hoop',
+    'A gusset that follows an overhang’s edge round and back to the side, leaving the middle open: click the side, then the overhang',
     'Gusset',
     'A fin off a side of the part, up under an overhang: click the side, then the overhang',
   ],
@@ -23,11 +30,14 @@ const KEYS = {
     'can’t place this gusset: {reason}',
     'couldn’t start a gusset there: {reason}',
     'gusset {mm}mm out from the side',
+    'Click a side of the part under an overhang, then the overhang. The hoop follows the overhang’s edge out and round back to the side, leaving the middle open, its underside climbing at {angle}° from both ends. Backspace takes back the side; Esc or right-click cancels.',
+    'hoop {mm}mm round the edge',
     '{n} side tine',
     '{n} side tines',
   ],
   'web/ui/readout.js': [
     'Click a side of the part under an overhang, then the overhang itself, to stand a gusset off the side',
+    'Click a side of the part under an overhang, then the overhang itself, to stand a hoop round its edge',
     '{n} gusset',
     '{n} gussets',
     '{n} side tine',

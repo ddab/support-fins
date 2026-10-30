@@ -236,6 +236,9 @@ function updateDrawReadout(built, ms) {
     lead.push(drawShapeNow() === 'gusset'
       ? t('Click a side of the part under an overhang, then the overhang itself, '
         + 'to stand a gusset off the side')
+      : drawShapeNow() === 'hoop'
+      ? t('Click a side of the part under an overhang, then the overhang itself, '
+        + 'to stand a hoop round its edge')
       : drawShapeNow() === 'curve'
       ? t('Click the two ends of a curve on the overhang, then a point it runs through, '
         + 'to lay a curved breakaway wall under it')

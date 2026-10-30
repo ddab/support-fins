@@ -159,6 +159,26 @@ default settings. The angle, gap and tine spacing are the starting values, not t
 from prints yet. The numbers and reasoning are in `docs/FIN-SPEC.md` ("Gussets"), the
 code is `web/gusset.js`, and `tests/gusset.test.js` pins its behaviour.
 
+#### Hoops: a gusset round an overhang's edge
+
+A straight gusset runs square off the side, so under a rounded tab with a screw hole
+in it, it would run straight under the hole. A **hoop** follows the overhang's edge
+instead: out from the side along one edge, round the end and back to the side,
+leaving the middle (and the hole) open.
+
+**Using it:** in **Draw**, pick **Hoop**. Click the side under the overhang, then click
+the overhang. The hoop finds the overhang's edge by itself and runs just inside it.
+Both of its ends are tined to the side, the same way a gusset's inner edge is, with
+Tines on or off. Its underside climbs at the gusset angle along the hoop from each end,
+so it's deepest where it meets the side and shallowest halfway round. It keeps clear
+of the part and of other supports the same way a gusset does.
+
+A hoop is refused, with the reason, if the overhang's edge doesn't come back to the
+side you clicked (use a gusset there), or for any of a gusset's reasons.
+
+**Status: not printed yet.** The code is `web/hoop.js`, and `tests/hoop.test.js` pins its
+behaviour on a plate with a rounded, holed tab (`hoop_tab.stl`).
+
 ### The "no config, geometry only" notice
 
 Opening the 3MF, **Bambu Studio** ("invalid config, load geometry data only") and

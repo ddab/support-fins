@@ -8,6 +8,7 @@ import { t, tn } from './i18n.js';
 import * as THREE from 'three';
 import { drawnWall } from '../draw.js';
 import { GUSSET, gussetAt, gussetDir, sideNormal } from '../gusset.js';
+import { hoopAt } from '../hoop.js';
 import { arcThrough, arcStations } from '../drawarc.js';
 import { planGrid } from '../fins/tall.js';
 import { boxGrid } from '../fins/fill.js';
@@ -42,7 +43,8 @@ let drawFace = null;              // a gusset in progress: the side face its fir
 let drawEnd = null;                // Vector3 (local) -- a curve's second click (its other end)
 // Line or Curve (local issue 063): a curve is three clicks -- its ends, then a point it
 // runs through -- built round the circular arc through all three (drawarc.js).
-// Gusset (gusset.js) is two clicks too: a side of the part, then the overhang it holds.
+// Gusset (gusset.js) is two clicks too: a side of the part, then the overhang it holds;
+// Hoop (hoop.js) the same two, the gusset then following the overhang's edge round.
 // Remembered per browser (optional).
 const SHAPE_KEY = 'support_fins_draw_shape';
 let drawShape = 'line';
@@ -337,7 +339,7 @@ export function sweepDrawn({ topology, res, rot, tris, walls, toWorld, auto: bui
       // side no longer stands upright under an overhang).
       toWorld(w.a, wa);
       toWorld(w.b, wb);
-      const r = gussetAt(toArr(wa), toArr(wb), w.n, tris, { ...drawOpts, supports: gussetSupports() });
+      const r = (w.hoop ? hoopAt : gussetAt)(toArr(wa), toArr(wb), w.n, tris, { ...drawOpts, supports: gussetSupports() });
       w.ok = r.ok;
       w.info = r;
       if (r.ok) for (const t of r.tris) out.push(t);
@@ -401,6 +403,8 @@ export function selectedNote() {
   const i = selectedWall.info ?? {};
   const what = selectedWall.kind === 'sway'
     ? t('sway brace {mm}mm tall', { mm: Math.round(i.height ?? 0) })
+    : selectedWall.kind === 'gusset' && selectedWall.hoop
+      ? t('hoop {mm}mm round the edge', { mm: Math.round(i.length ?? 0) })
     : selectedWall.kind === 'gusset'
       ? t('gusset {mm}mm out from the side', { mm: Math.round(i.reach ?? 0) })
       : t('wall {mm}mm long', { mm: Math.round(i.length ?? 0) });
@@ -460,7 +464,7 @@ function updatePreview(hitPoint) {
     if (drawFace !== null) {
       // a gusset in progress: the ghost is the fin the second click stands, and a
       // spot it can't reach says why at once (the band turns red)
-      const r = gussetAt([ga.x, ga.y, ga.z], [gb.x, gb.y, gb.z], drawFace, tris,
+      const r = finAt([ga.x, ga.y, ga.z], [gb.x, gb.y, gb.z], drawFace, tris,
                          { topo: topology, rot: rotM3.elements, offset: lastResult.offset,
                            supports: supportsOnScreen() });
       if (r.ok) { ghostMesh = meshFrom(r.tris, ghostMaterial); ghostMesh?.layers.disable(MODEL); }
@@ -506,11 +510,14 @@ function placeWall(bWorld, mWorld = null) {
   updateFit();
 }
 
+/** The gusset (or, drawing a Hoop, the hoop) a click at `o` stands off the side at `w`. */
+const finAt = (w, o, side, tris, opts) => (drawShape === 'hoop' ? hoopAt : gussetAt)(w, o, side, tris, opts);
+
 /** Commit the gusset off the side clicked first (`drawStart` on `drawFace`) out to `bWorld`. */
 function placeGusset(bWorld) {
   part.updateMatrixWorld();
   const aWorld = part.localToWorld(drawStart.clone());
-  const r = gussetAt([aWorld.x, aWorld.y, aWorld.z], [bWorld.x, bWorld.y, bWorld.z], drawFace,
+  const r = finAt([aWorld.x, aWorld.y, aWorld.z], [bWorld.x, bWorld.y, bWorld.z], drawFace,
                      partPrintTriangles(), { topo: topology, rot: rotM3.elements, offset: lastResult.offset,
                                              supports: supportsOnScreen() });
   if (!r.ok) {
@@ -520,7 +527,7 @@ function placeGusset(bWorld) {
   }
   drawMsg = '';
   histPush();
-  drawnWalls.push({ kind: 'gusset', n: sideNormal(topology, drawFace), a: drawStart.clone(),
+  drawnWalls.push({ kind: 'gusset', ...(drawShape === 'hoop' ? { hoop: true } : {}), n: sideNormal(topology, drawFace), a: drawStart.clone(),
                    b: part.worldToLocal(bWorld.clone()) });
   clearPreview();
   rebuildDrawn();
@@ -699,7 +706,9 @@ export function syncDrawControls() {
   el('draw-controls').hidden = !drawShown();
   el('draw-hint').hidden = el('draw-shape').hidden = !drawActive();
   for (const b of el('draw-shape').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.shape === drawShape));
-  el('draw-hint').innerHTML = drawShape === 'gusset'
+  el('draw-hint').innerHTML = drawShape === 'hoop'
+    ? t('Click a side of the part under an overhang, then the overhang. The hoop follows the overhang’s edge out and round back to the side, leaving the middle open, its underside climbing at {angle}° from both ends. Backspace takes back the side; Esc or right-click cancels.', { angle: GUSSET.angle })
+    : drawShape === 'gusset'
     ? t('Click a side of the part under an overhang, then the point on the overhang the gusset should reach out to. It runs square off the side, its underside climbing at {angle}° so nothing under it touches the plate. Backspace takes back the side; Esc or right-click cancels.', { angle: GUSSET.angle })
     : drawShape === 'curve'
     ? t('Click the two ends of a curved wall on the red faces, then a point it runs through — out past the ends for a bigger arc. Ends snap to another wall’s end, so two curves close a ring. Backspace takes back a point; Esc or right-click cancels.')
@@ -821,7 +830,7 @@ export function braceClick(e) {
 }
 
 /** With Sway braces on, a click on an UPRIGHT side (no wall half-drawn) stands a brace. */
-const swayHit = (hit) => !drawStart && el('sway').checked && !(drawActive() && drawShape === 'gusset')
+const swayHit = (hit) => !drawStart && el('sway').checked && !(drawActive() && (drawShape === 'gusset' || drawShape === 'hoop'))
   && faceIsUpright(topology, rotM3.elements, hit.faceIndex);
 
 /** A click: select a placed support, stand a sway brace, or set / commit a wall end. */

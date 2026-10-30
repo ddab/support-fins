@@ -379,6 +379,24 @@ Draw > Gusset, a click on the side, then a click on the overhang.
 | other supports | kept `PROP.sideClear` off Auto's fins on screen and every hand-placed support stood before it (`boxGrid`, in 3D) | two supports that touch fuse into one piece that won't break away; 3D, so the bed pad under a gusset is no clash |
 | refused | not an upright face (≤ 30° lean); the side doesn't reach ≥ 80 % of the inner edge, or isn't there at its first layer; the body would cut into or weld to the part; another support within `sideClear` | says why, before the click, in the ghost |
 
+### Gusset hoops (Draw only) — `web/hoop.js`
+
+Not printed yet. A gusset whose top follows the overhang's edge round and back to the
+side, instead of running square off it, so the middle of the overhang stays open: a
+rounded tab with a screw hole keeps its hole clean. Placed by hand: Draw > Hoop, a
+click on the side, then a click on the overhang. Everything not in this table is a
+gusset's (above).
+
+| feature | value | rationale |
+|---|---|---|
+| the edge | the outer boundary of the down-facing faces (normal ≥ 60° from upright, `HOOP.downCos`) grown from the one under the click; the run of it from where it leaves the side to where it comes back, nearest the click | the overhang's own outline, any shape, holes ignored |
+| path | that run moved in so the hoop's outer face stands **0.15 mm** (`HOOP.edgeIn`) inside the edge; stations every **0.5 mm** (`HOOP.step`) | an edge curls tighter than a wall's 1 mm pitch follows |
+| ends | **`sideClear` + half the wall** off the side, both; clearance may trim them at most **1 mm** (`HOOP.endSlack`) further | the end cap's corners stand a flank off the side when the edge meets it at an angle, and the tines still reach |
+| underside | climbs at `GUSSET.angle` **along the hoop** from each end to `GUSSET.endDepth` under the overhang half way round | every layer of the bottom edge sits on the one below; climbing by distance from the side instead would leave the far end flat, a bridge |
+| side tines | a gusset's, at **both** ends | tied to the side twice |
+| length | at most **120 mm** round (`HOOP.maxLength`) | past that it's a fence |
+| refused | the edge never comes back to the clicked side (`use a gusset instead`); no overhang under the click; any of a gusset's reasons | says why, in the ghost |
+
 ## Joined walls and ties (Full coverage) — `web/fins/fill.js`, `web/prop/ties.js`
 
 Not printed yet. A figure's fill walls stood apart, each on its own ("all the fins become

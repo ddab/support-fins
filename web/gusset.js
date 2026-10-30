@@ -76,7 +76,7 @@ export function gussetDir(topo, rot, side) {
 
 /** The underside the fin holds up at (x, y): the lowest down-facing surface above
  *  `zMin`. Null when there is none (open sky over that station). */
-function undersideAt(tris, x, y, zMin) {
+export function undersideAt(tris, x, y, zMin) {
   let best = null;
   for (const [z, nz] of surfaceHitsAt(tris, x, y)) {
     if (nz < 0 && z > zMin && (best === null || z < best)) best = z;
@@ -158,17 +158,7 @@ export function gussetAt(w, o, side, tris, opts) {
   // The side has to be there behind the inner edge, all the way down it: an L whose
   // upright stops short (or a click past the side's end) leaves the fin hanging.
   const zLo = floors[0][2] + PROP.footGap, zHi = top[0][2] - PROP.gap;
-  const [bx, by] = at(-GUSSET.wallProbe);
-  let behind = 0, asked = 0;
-  for (let z = zLo + 0.25; z < zHi - 0.25; z += 0.5) {
-    asked++;
-    if (insidePart(topo, rot, offset, bx, by, z)) behind++;
-  }
-  // ...and right at the bottom: the fin's lowest layer is its first, and only a tine
-  // into the side there keeps it from printing in air (`sideTineLevels`)
-  const zFirst = Math.floor(zLo / layerH) * layerH;
-  if (!asked || behind < GUSSET.wallShare * asked
-      || !insidePart(topo, rot, offset, bx, by, zFirst + layerH / 2)) {
+  if (!sideHolds(topo, rot, offset, at(-GUSSET.wallProbe), zLo, zHi, layerH)) {
     return refused('the side doesn’t run far enough down for a gusset this long at {angle}° — reach less far, or start it lower on the side',
                    { angle });
   }
@@ -186,26 +176,7 @@ export function gussetAt(w, o, side, tris, opts) {
   let height = 0;
   for (let k = 0; k < top.length; k++) height = Math.max(height, top[k][2] - PROP.gap - floors[k][2]);
 
-  // Side tines: one layer each up the inner edge, from just inside the fin's end
-  // across the gap into the side (sway.js's tine, kissed). Always built, Tines on or
-  // off: the side is all that holds a gusset up until the overhang prints over it.
-  // The first sits in the fin's very first layer and the last in its top layer, so
-  // neither end of the inner edge starts or finishes in air.
-  const tw = SWAY.tineW / 2;
-  const ox = w[0] + nx * u0, oy = w[1] + ny * u0, ax = -nx, ay = -ny;
-  let sideTines = 0;
-  for (const bot of sideTineLevels(zLo, zHi, layerH)) {
-    const tp = bot + layerH;
-    const e = kissEnds(topo, rot, offset, ox, oy, ax, ay, bot, tp,
-                       { half: tw, back: SWAY.tineOverlap, reach: u0 + SWAY.tineReach });
-    if (Math.max(...e.bot, ...e.top) > u0 + SWAY.tineSpanMax) continue;   // a bridge, not a tine
-    const P = (a, b, zz) => [ox + ax * a - ay * b, oy + ay * a + ax * b, zz];
-    const outline = (h) => [[-SWAY.tineOverlap, -tw], [e[h][0], -tw], [e[h][1], tw], [-SWAY.tineOverlap, tw]];
-    const local = [];
-    loftExtrude(outline('bot'), outline('top'), bot, tp, P, local);
-    pushOutward(local, out);
-    sideTines++;
-  }
+  const sideTines = sideTinesAt(topo, rot, offset, at(u0), dir, u0, zLo, zHi, layerH, out);
   // Top tines: the comb every drawn wall gets along its contact line, when Tines is
   // on. Horizontal tines bite sideways, so a sloped underside takes them and a flat
   // one doesn't (FIN-SPEC, why the tines must be horizontal).
@@ -224,8 +195,55 @@ export function gussetAt(w, o, side, tris, opts) {
 }
 
 /** The body would cut into the part (or weld to it), wherever it was found. */
-function intoPart() {
+export function intoPart() {
   return { ok: false, reason: 'the gusset runs into the part — start it where the side is flat and clear out to the overhang' };
+}
+
+/**
+ * Is the side there behind an end of the fin, all the way down it? `b` is a point
+ * GUSSET.wallProbe inside the side, behind the end; the end's edge runs from `zLo`
+ * (its lowest point) to `zHi` (its top). An L whose upright stops short (or a click past
+ * the side's end) leaves the fin hanging. And right at the bottom: the fin's lowest
+ * layer is its first, and only a tine into the side there keeps it from printing in
+ * air (`sideTineLevels`).
+ */
+export function sideHolds(topo, rot, offset, b, zLo, zHi, layerH) {
+  let behind = 0, asked = 0;
+  for (let z = zLo + 0.25; z < zHi - 0.25; z += 0.5) {
+    asked++;
+    if (insidePart(topo, rot, offset, b[0], b[1], z)) behind++;
+  }
+  const zFirst = Math.floor(zLo / layerH) * layerH;
+  return asked > 0 && behind >= GUSSET.wallShare * asked
+    && insidePart(topo, rot, offset, b[0], b[1], zFirst + layerH / 2);
+}
+
+/**
+ * Side tines up an end of the fin standing `u` off the side, at `p` (x, y), the side's
+ * levelled normal `dir`, its edge from `zLo` to `zHi`: one layer each, from just inside
+ * the fin's end across the gap into the side (sway.js's tine, kissed), appended to
+ * `out`; returns how many. Always built, Tines on or off: the side is all that holds the
+ * fin up until the overhang prints over it. The first sits in the fin's very first
+ * layer and the last in its top layer, so neither end of the edge starts or finishes
+ * in air.
+ */
+export function sideTinesAt(topo, rot, offset, p, dir, u, zLo, zHi, layerH, out) {
+  const tw = SWAY.tineW / 2;
+  const [ox, oy] = p, ax = -dir[0], ay = -dir[1];
+  let n = 0;
+  for (const bot of sideTineLevels(zLo, zHi, layerH)) {
+    const tp = bot + layerH;
+    const e = kissEnds(topo, rot, offset, ox, oy, ax, ay, bot, tp,
+                       { half: tw, back: SWAY.tineOverlap, reach: u + SWAY.tineReach });
+    if (Math.max(...e.bot, ...e.top) > u + SWAY.tineSpanMax) continue;   // a bridge, not a tine
+    const P = (a, b, zz) => [ox + ax * a - ay * b, oy + ay * a + ax * b, zz];
+    const outline = (h) => [[-SWAY.tineOverlap, -tw], [e[h][0], -tw], [e[h][1], tw], [-SWAY.tineOverlap, tw]];
+    const local = [];
+    loftExtrude(outline('bot'), outline('top'), bot, tp, P, local);
+    pushOutward(local, out);
+    n++;
+  }
+  return n;
 }
 
 /**
@@ -245,7 +263,7 @@ export function sideTineLevels(zLo, zHi, layerH) {
 }
 
 /** A refusal whose reason carries numbers: `why` with them filled in as `reason`. */
-function refused(why, params) {
+export function refused(why, params) {
   const reason = why.replace(/{(\w+)}/g, (_, k) => String(params[k]));
   return { ok: false, reason, why, params };
 }
