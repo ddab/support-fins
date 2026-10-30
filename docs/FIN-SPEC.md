@@ -389,13 +389,16 @@ gusset's (above).
 
 | feature | value | rationale |
 |---|---|---|
-| the edge | the outer boundary of the down-facing faces (normal ≥ 60° from upright, `HOOP.downCos`) grown from the one under the click; the run of it from where it leaves the side to where it comes back, nearest the click | the overhang's own outline, any shape, holes ignored |
-| path | that run moved in so the hoop's outer face stands **0.15 mm** (`HOOP.edgeIn`) inside the edge; stations every **0.5 mm** (`HOOP.step`) | an edge curls tighter than a wall's 1 mm pitch follows |
+| the edge | the FREE boundary of the down-facing faces (normal ≥ 60° from upright, `HOOP.downCos`) grown from the one under the click: where the face beyond runs up (the overhang's rim), not down (a side under it) | the overhang's own outline, any shape; a rim's inside edge is a closed loop of it |
+| the tab | from the edge point furthest from the side within **8 mm** of the click (`HOOP.pick`), down both flanks while they close on the side: to the side, or to where the edge levels out (closing by under **0.15 mm** a mm, `HOOP.level`, once **1 mm** nearer than the tip) | the tip, not a hole beside it; an eyelet on a lip stops where it meets the lip |
+| distance to the side | measured straight back along the clicked side's normal to the solid, just under the overhang | the side itself, curved or not, not the clicked face's plane |
+| path | the tab moved in so the hoop's outer face stands **0.15 mm** (`HOOP.edgeIn`) inside the edge, or to the middle where the overhang is narrower than that before another free edge (an eyelet's ring); stations every **0.5 mm** (`HOOP.step`) | an edge curls tighter than a wall's 1 mm pitch follows; the contact stays under a thin ring |
+| legs | from each end of the tab straight back to the side under the overhang | an eyelet on a lip reaches the side across the lip |
 | ends | **`sideClear` + half the wall** off the side, both; clearance may trim them at most **1 mm** (`HOOP.endSlack`) further | the end cap's corners stand a flank off the side when the edge meets it at an angle, and the tines still reach |
 | underside | climbs at `GUSSET.angle` **along the hoop** from each end to `GUSSET.endDepth` under the overhang half way round | every layer of the bottom edge sits on the one below; climbing by distance from the side instead would leave the far end flat, a bridge |
 | side tines | a gusset's, at **both** ends | tied to the side twice |
 | length | at most **120 mm** round (`HOOP.maxLength`) | past that it's a fence |
-| refused | the edge never comes back to the clicked side (`use a gusset instead`); no overhang under the click; any of a gusset's reasons | says why, in the ghost |
+| refused | a leg crosses open air to the side (`use a gusset instead`); no overhang or free edge at the click; any of a gusset's reasons | says why, in the ghost |
 
 ## Joined walls and ties (Full coverage) — `web/fins/fill.js`, `web/prop/ties.js`
 

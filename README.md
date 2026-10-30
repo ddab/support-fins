@@ -168,16 +168,20 @@ leaving the middle (and the hole) open.
 
 **Using it:** in **Draw**, pick **Hoop**. Click the side under the overhang, then click
 the overhang. The hoop finds the overhang's edge by itself and runs just inside it.
+A tab on a lip works too, like an eyelet sticking out of a rim inside a tube: the hoop
+goes round the eyelet, then runs straight across under the lip to the wall, curved
+or not.
 Both of its ends are tined to the side, the same way a gusset's inner edge is, with
 Tines on or off. Its underside climbs at the gusset angle along the hoop from each end,
 so it's deepest where it meets the side and shallowest halfway round. It keeps clear
 of the part and of other supports the same way a gusset does.
 
-A hoop is refused, with the reason, if the overhang's edge doesn't come back to the
-side you clicked (use a gusset there), or for any of a gusset's reasons.
+A hoop is refused, with the reason, if there's no overhang between the tab and the side
+you clicked (use a gusset there), or for any of a gusset's reasons.
 
 **Status: not printed yet.** The code is `web/hoop.js`, and `tests/hoop.test.js` pins its
-behaviour on a plate with a rounded, holed tab (`hoop_tab.stl`).
+behaviour on a plate with a rounded, holed tab (`hoop_tab.stl`) and a tube with eyelets
+on its inner lips (`eyelet_rim.stl`).
 
 ### The "no config, geometry only" notice
 

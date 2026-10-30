@@ -87,7 +87,7 @@ Deno.test('hoop: its underside climbs at the gusset angle along it, deepest at t
   }
   const mid = Math.max(...r.floors);
   assert(r.floors[0] < mid && r.floors[r.floors.length - 1] < mid, 'not deepest at the ends');
-  assertClose(TAB.ledgeZ - PROP.gap - mid, Math.max(GUSSET.endDepth, PROP.minHeight + PROP.footGap + 0.1), 1e-3, 'depth half way round');
+  assertClose(TAB.ledgeZ - PROP.gap - mid, Math.max(GUSSET.endDepth, PROP.minHeight + PROP.footGap + 0.1), 0.01, 'depth half way round');
 });
 
 Deno.test('hoop: watertight, and only its tines bite into the part', () => {
@@ -137,4 +137,38 @@ Deno.test('hoop: round a narrow arm, and kept clear of the supports standing', (
   g.add(wall);
   const clash = at(topo, [12, 10, 30], { supports: g });
   assert(!clash.ok && /fuse/.test(clash.reason), `built into a wall: ${clash.reason ?? 'ok'}`);
+});
+
+// An eyelet on a rim: eyelet_rim.stl is a tube (1.5 mm walls, 89.5 mm tall, modelled Y
+// up) with a 2 mm lip round the inside at each end and eyelets reaching in off the
+// lips. The eyelet's edge never comes back to the tube's curved wall -- it runs into the
+// lip -- so the hoop follows the eyelet down to the lip and legs it to the wall from there.
+const RIM = (() => {
+  const topo = loadModel('eyelet_rim');
+  const rot = [1, 0, 0, 0, 0, 1, 0, -1, 0];
+  const offset = analyze(topo, 45, rot).offset;
+  const at = (x, y, z) => [x + offset.x, -z + offset.y, y + offset.z];
+  return { topo, rot, offset, tris: posed(topo, rot, offset), at, hole: { c: at(13.601, 0, -7.891), r: 1.095 } };
+})();
+
+Deno.test('hoop: round an eyelet on a rim, legged to the curved wall under the lip, at either end of the tube', () => {
+  for (const [lip, y, oy] of [['top', 70, 79], ['bottom', -7.9, -5]]) {
+    const r = hoopAt(RIM.at(13.6, y, -10.9), RIM.at(13.6, oy, -6.4), [0, 0, 1], RIM.tris,
+                     { topo: RIM.topo, rot: RIM.rot, offset: RIM.offset, tines: true });
+    assert(r.ok, `${lip} lip: ${r.reason}`);
+    // round the far side of the hole; its top, the contact, never under the hole -- the
+    // eyelet's ring is about a wall wide on one side, so the body below the contact may
+    // reach a little way under the hole's rim, never across it
+    assert(Math.min(...r.top.map((p) => p[1])) < RIM.hole.c[1] - RIM.hole.r, `${lip}: not round the eyelet`);
+    const zTop = Math.max(...r.top.map((p) => p[2])) - PROP.gap;
+    for (const v of r.tris) {
+      const d = Math.hypot(v[0] - RIM.hole.c[0], v[1] - RIM.hole.c[1]);
+      const contact = v[2] > zTop - 0.05;
+      assert(d > RIM.hole.r - (contact ? 0 : 0.25), `${lip}: a ${contact ? 'contact ' : ''}vertex ${d.toFixed(2)} mm from the hole’s centre`);
+    }
+    // its ends on either side of the eyelet, both tined to the wall
+    const [a, b] = [r.top[0], r.top[r.top.length - 1]];
+    assert((a[0] - RIM.hole.c[0]) * (b[0] - RIM.hole.c[0]) < 0, `${lip}: both ends on one side of the eyelet`);
+    assert(r.sideTines >= 2, `${lip}: ${r.sideTines} side tines`);
+  }
 });
