@@ -23,12 +23,10 @@
  *
  * Placement is by hand (Draw > Hoop): a click on the side, then a click on the overhang.
  */
-import { insidePart, solidClearance } from './inside.js';
+import { insidePart } from './inside.js';
 import { PROP, emitTines, tineStepFor, crestOn, crestPart } from './prop.js';
 import { clearBetween, trimmedEnds } from './prop/attached.js';
-import { welds } from './prop/clearance.js';
-import { sweepBetween } from './prop/sweep.js';
-import { GUSSET, gussetDir, undersideAt, sideHolds, sideTinesAt, refused, intoPart } from './gusset.js';
+import { GUSSET, gussetDir, undersideAt, settled, sweptClear, sideHolds, sideTinesAt, refused, intoPart } from './gusset.js';
 
 export const HOOP = {
   downCos: 0.5,     // a face is part of the overhang when its normal points down this much (60 deg off upright)
@@ -120,6 +118,7 @@ export function hoopAt(w, o, side, tris, opts) {
     if (z === null) return { ok: false, reason: 'the overhang’s edge doesn’t come back to this side — use a gusset instead' };
     top.push([x, y, z]);
   }
+  settled(top, tris);
 
   // The underside: GUSSET.endDepth under the overhang half way round, climbing down at
   // `slope` along the hoop to each end. A station whose underside would sink under the
@@ -159,13 +158,10 @@ export function hoopAt(w, o, side, tris, opts) {
     }
   }
 
-  const out = [];
   if (crestOn()) crestPart(tris, layerH);
-  if (!sweepBetween(top, floors, out, PROP.minHeightSquat)) {
-    return { ok: false, reason: 'too little room under the overhang there for a gusset' };
-  }
-  const hit = solidClearance(topo, rot, offset, out, 0.25);
-  if (hit && welds(hit)) return intoPart();
+  const out = sweptClear(top, floors, topo, rot, offset);
+  if (!out) return intoPart();
+  if (out.thin) return { ok: false, reason: 'too little room under the overhang there for a gusset' };
   let height = 0;
   for (let k = 0; k < top.length; k++) height = Math.max(height, top[k][2] - PROP.gap - floors[k][2]);
 

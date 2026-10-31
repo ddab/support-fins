@@ -148,6 +148,9 @@ click cancels. Place as many as you like, side by side.
 - Like every support here, it stands off the part by the breakaway gap, and only the
   tines touch it.
 
+Its top follows whatever it holds up: a sloped or round underside (a boss through a
+wall, say), or a groove or step in it, which the gusset bridges under.
+
 A gusset is refused, with the reason, if the side isn't solid where its tines go, if the
 reach is too short, if it would run into the part, or if it would touch another support
 (the two would fuse into one piece).
@@ -180,8 +183,9 @@ A hoop is refused, with the reason, if there's no overhang between the tab and t
 you clicked (use a gusset there), or for any of a gusset's reasons.
 
 **Status: not printed yet.** The code is `web/hoop.js`, and `tests/hoop.test.js` pins its
-behaviour on a plate with a rounded, holed tab (`hoop_tab.stl`) and a tube with eyelets
-on its inner lips (`eyelet_rim.stl`).
+behaviour on a plate with a rounded, holed tab (`hoop_tab.stl`), a tube with eyelets
+on its inner lips (`eyelet_rim.stl`), and a tube with a round boss through its wall
+(`boss_tube.stl`).
 
 ### The "no config, geometry only" notice
 

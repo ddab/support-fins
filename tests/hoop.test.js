@@ -172,3 +172,37 @@ Deno.test('hoop: round an eyelet on a rim, legged to the curved wall under the l
     assert(r.sideTines >= 2, `${lip}: ${r.sideTines} side tines`);
   }
 });
+
+// A round boss through a wall: boss_tube.stl is a rounded-rectangle tube (1.5 mm walls,
+// 78.7 mm tall, modelled Y up) with a horizontal 8.8 mm boss through its left wall near
+// the top, a 4 mm hole along it, sticking 6.5 mm in and 4 mm out, a groove round the
+// outside part. The boss's underside is round and the groove steps it: the fins' tops
+// settle under both (gusset.js settled, sweptClear) instead of being refused.
+const BOSS = (() => {
+  const topo = loadModel('boss_tube');
+  const rot = [1, 0, 0, 0, 0, 1, 0, -1, 0];
+  const offset = analyze(topo, 45, rot).offset;
+  const at = (x, y, z) => [x + offset.x, -z + offset.y, y + offset.z];
+  return { topo, rot, offset, tris: posed(topo, rot, offset), at };
+})();
+
+Deno.test('round boss: gussets under it on and off its axis, in and out of the tube, and a hoop round it', async () => {
+  const { gussetAt } = await import(`${WEB}gusset.js`);
+  const opts = { topo: BOSS.topo, rot: BOSS.rot, offset: BOSS.offset };
+  const cases = [
+    ['gusset inside, on the axis', gussetAt, [1, 0, 0], [-13.28, 62, 0.2], [-7.5, 70, 0.2]],
+    ['gusset inside, 1.8 mm off it', gussetAt, [1, 0, 0], [-13.28, 62, 2], [-7.5, 70, 2]],
+    ['gusset outside, under the grooved flange', gussetAt, [-1, 0, 0], [-14.78, 62, 0.2], [-18.3, 70, 0.2]],
+    ['hoop inside, round the boss', hoopAt, [1, 0, 0], [-13.28, 62, 0.2], [-7.5, 70, 0.2]],
+  ];
+  for (const [name, f, n, w, o] of cases) {
+    const r = f(BOSS.at(...w), BOSS.at(...o), n, BOSS.tris, opts);
+    assert(r.ok, `${name}: ${r.reason}`);
+    assert(r.sideTines >= 2, `${name}: ${r.sideTines} side tines`);
+    // Tines off: only the side tines' ends are in the part, in the wall's skin
+    const inside = r.tris.filter((v) => insideCount(BOSS.topo, BOSS.rot, BOSS.offset, [v]) > 0);
+    for (const v of inside) {
+      assert(Math.abs(v[0] - BOSS.at(...w)[0]) < 0.05, `${name}: a vertex inside the part at ${v.map((c) => c.toFixed(2))}`);
+    }
+  }
+});

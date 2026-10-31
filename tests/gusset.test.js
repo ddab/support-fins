@@ -263,7 +263,7 @@ Deno.test('gusset: a rib thinner than the station pitch, between two stations, r
   assert(!r.ok && /runs into the part/.test(r.reason), `built through the rib: ${r.reason ?? 'ok'}`);
 });
 
-Deno.test('gusset: a lip at the far end trims the reach, not the side; one it runs under refuses it', () => {
+Deno.test('gusset: a lip at the far end trims the reach, not the side; one it runs under it passes under', () => {
   const at = (topo) => gussetAt([5, 10, 20], [15, 10, 30], faceAt(topo, 5, 1), topo.pos,
                                 { topo, rot: IDENTITY, offset: OFF });
   // a lip hanging off the arm 0.1 mm past the clicked reach: the last station would
@@ -276,9 +276,14 @@ Deno.test('gusset: a lip at the far end trims the reach, not the side; one it ru
   assert(r.top[0][0] - 5 < PROP.sideClear + 1e-6, 'the inner end moved off the side');
   assert(r.sideTines > 0, 'no side tines');
   // ...a lip across the middle of the fin: its top would step down under the lip with
-  // no station on the step, and only the swept body's measure sees the corner
-  const under = at(lWith(14, 15, 0, 20, 27, 30));
-  assert(!under.ok && /runs into the part/.test(under.reason), `built under the lip: ${under.reason ?? 'ok'}`);
+  // no station on the step, and only the swept body's measure sees the corner -- where
+  // it does, the stations round it come down (sweptClear) and the fin passes under the
+  // lip, clear of it
+  const lipped = lWith(14, 15, 0, 20, 27, 30);
+  const under = at(lipped);
+  assert(under.ok, `refused under the lip: ${under.reason}`);
+  assert(insideCount(lipped, IDENTITY, OFF, body(under.tris)) === 0, 'the body went into the lip');
+  assert(Math.max(...under.top.filter((p) => p[0] > 13.5 && p[0] < 15.5).map((p) => p[2])) <= 27 + 1e-6, 'its top runs into the lip');
 });
 
 Deno.test('gusset: keeps clear of the supports standing, in 3D', () => {

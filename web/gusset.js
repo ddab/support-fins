@@ -32,7 +32,7 @@
  */
 import { insidePart, solidClearance } from './inside.js';
 import { kissEnds } from './kiss.js';
-import { PROP, emitTines, tineStepFor, crestOn, crestPart } from './prop.js';
+import { PROP, PART_BAND, emitTines, tineStepFor, crestOn, crestPart, contourTop, lowerSag, settleTop } from './prop.js';
 import { clearBetween, trimmedEnds } from './prop/attached.js';
 import { welds } from './prop/clearance.js';
 import { surfaceHitsAt } from './prop/surface.js';
@@ -128,6 +128,7 @@ export function gussetAt(w, o, side, tris, opts) {
     if (z === null) return { ok: false, reason: 'nothing overhangs there — the gusset has to run out under the overhang' };
     top.push([x, y, z]);
   }
+  settled(top, tris);
 
   // The underside: up from the inner end at `slope` to GUSSET.endDepth under the outer
   // tip. A station whose underside would sink under the plate stands on it instead
@@ -163,16 +164,13 @@ export function gussetAt(w, o, side, tris, opts) {
                    { angle });
   }
 
-  const out = [];
   if (crestOn()) crestPart(tris, layerH);
-  if (!sweepBetween(top, floors, out, PROP.minHeightSquat)) {
-    return { ok: false, reason: 'too little room under the overhang there for a gusset' };
-  }
   // ...and then the swept body is MEASURED against the whole part, as Auto's walls are
   // (prop.js): the stations above are a mm apart, and a rib thinner than that between
   // two of them is seen only by the solid's own triangles (solidClearance).
-  const hit = solidClearance(topo, rot, offset, out, 0.25);
-  if (hit && welds(hit)) return intoPart();
+  const out = sweptClear(top, floors, topo, rot, offset);
+  if (!out) return intoPart();
+  if (out.thin) return { ok: false, reason: 'too little room under the overhang there for a gusset' };
   let height = 0;
   for (let k = 0; k < top.length; k++) height = Math.max(height, top[k][2] - PROP.gap - floors[k][2]);
 
@@ -197,6 +195,47 @@ export function gussetAt(w, o, side, tris, opts) {
 /** The body would cut into the part (or weld to it), wherever it was found. */
 export function intoPart() {
   return { ok: false, reason: 'the gusset runs into the part — start it where the side is flat and clear out to the overhang' };
+}
+
+/**
+ * Settle a fin's top under the overhang the way a drawn wall's is (draw.js drawnLine):
+ * lowered for the tip's width where the underside slopes across it (contourTop), where
+ * it sags between stations (lowerSag), and so its closest approach is the gap
+ * (settleTop) -- all within PART_BAND of the overhang, never onto a floor below. A
+ * round boss's underside, a groove or a step in it, take the fin's top as they come.
+ */
+export function settled(top, tris) {
+  contourTop(top, tris, PART_BAND);
+  lowerSag(top, tris, PART_BAND);
+  settleTop(top, tris, 0.25, PART_BAND);
+  return top;
+}
+
+/**
+ * Sweep a fin (sweepBetween) and measure it against the part (solidClearance, `welds`),
+ * and where it comes too near, lower the stations round the place it does to the lowest
+ * of them and sweep again, as Auto trims a wall where it welds (prop.js): a groove in
+ * the underside, which a station dips into and the top's corner then meets sideways, is
+ * bridged under instead. Up to 4 tries. The triangles, `{ thin: true }` when a station
+ * has too little room left, or null when it can't be cleared.
+ */
+export function sweptClear(top, floors, topo, rot, offset) {
+  for (let tries = 0; tries < 4; tries++) {
+    const out = [];
+    if (!sweepBetween(top, floors, out, PROP.minHeightSquat)) return { thin: true };
+    const hit = solidClearance(topo, rot, offset, out, 0.25);
+    if (!hit || !welds(hit)) return out;
+    let k = 0, dBest = Infinity;
+    for (let i = 0; i < top.length; i++) {
+      const d = Math.hypot(top[i][0] - hit.x, top[i][1] - hit.y);
+      if (d < dBest) { dBest = d; k = i; }
+    }
+    const near = [k - 1, k, k + 1].filter((i) => i >= 0 && i < top.length);
+    const lo = Math.min(...near.map((i) => top[i][2]));
+    if (near.every((i) => top[i][2] - lo < 1e-6)) return null;   // nothing to lower: it isn't the top
+    for (const i of near) top[i] = [top[i][0], top[i][1], lo];
+  }
+  return null;
 }
 
 /**
