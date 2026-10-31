@@ -31,6 +31,7 @@
  *   fill.js       Full coverage: Draw-built walls under the red Auto left bare
  *   tall.js       face ribs on walls over BRACE.tallH, last, around everything placed
  *   downhill.js   downhill walls kept only if the whole build is no worse (#25)
+ *   gussets.js    Auto's gussets and hoops, off the part's sides (the Auto can use boxes)
  *
  * Each module imports only modules above it in this list and never fins.js.
  */
@@ -50,6 +51,7 @@ import { buildPerpFins, PERP, propServesPatch, unservedAfterWedges, wedgeVeto } 
 import { judgeDownhill } from './fins/downhill.js';
 import { automaticTargets } from './fins/coverage.js';
 import { bends, CURVED } from './prop/curved.js';
+import { autoGussets } from './fins/gussets.js';
 import { applyNozzle, applyWallLines } from './nozzle.js';
 
 // Moved into web/fins/ (one module per concern); re-exported here so every
@@ -176,7 +178,14 @@ function buildFinsAndBraces(topo, result, rot, opts = {}) {
   applyTunables(opts.tunables);
   // the interface crest's 'flat' test reads the underside off the seated part
   crestPart(crestOn() ? seatedPartTris(topo, rot, result.offset) : null, opts.layerHeight);
-  const built = buildFinsCore(topo, result, rot, opts);
+  let built = buildFinsCore(topo, result, rot, opts);
+  // Gussets and hoops (fins/gussets.js), when ticked: after the walls, Full's fill
+  // included, so they take the red the walls left and the walls much taller than they
+  // are -- and before the braces, which stand clear of them.
+  if ((opts.mode === 'auto' || opts.mode === 'full')
+      && (opts.autoGussets === true || opts.autoHoops === true || opts.straightWalls === false)) {
+    built = autoGussets(topo, result, rot, opts, built);
+  }
   // Sway braces are an optional ADD-ON to whatever the mode placed (sway.js): a
   // tall part still needs its overhangs held, and bracing its sides is a
   // separate job on separate faces.

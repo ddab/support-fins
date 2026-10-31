@@ -354,7 +354,7 @@ set the numbers.
 | clearance | `sideClear` off the part (only at stations whose floor is the plate) and off every other support below the rib's top, in plan, ~1 mm pieces | no rib fuses two pieces; a 3D box grid was exact but cost 4 s on bigplate Y35, this ~0.2 s |
 | skipped | a wall the fill pass already ribbed (the slim rule) | no doubled ribs |
 
-## Gussets (Draw only) — `web/gusset.js`
+## Gussets (Draw, and Auto when ticked) — `web/gusset.js`
 
 Printed once: a 25 × 20 × 35 mm upside-down L at default settings (2026-10-28) printed
 clean, the gusset holding the arm. The angle, gap and tine spacing are starting values,
@@ -380,7 +380,7 @@ Draw > Gusset, a click on the side, then a click on the overhang.
 | other supports | kept `PROP.sideClear` off Auto's fins on screen and every hand-placed support stood before it (`boxGrid`, in 3D) | two supports that touch fuse into one piece that won't break away; 3D, so the bed pad under a gusset is no clash |
 | refused | not an upright face (≤ 30° lean); the side doesn't reach ≥ 80 % of the inner edge, or isn't there at its first layer; the body would cut into or weld to the part; another support within `sideClear` | says why, before the click, in the ghost |
 
-### Gusset hoops (Draw only) — `web/hoop.js`
+### Gusset hoops (Draw, and Auto when ticked) — `web/hoop.js`
 
 Not printed yet. A gusset whose top follows the overhang's edge round and back to the
 side, instead of running square off it, so the middle of the overhang stays open: a
@@ -400,6 +400,26 @@ gusset's (above).
 | side tines | a gusset's, at **both** ends | tied to the side twice |
 | length | at most **120 mm** round (`HOOP.maxLength`) | past that it's a fence |
 | refused | a leg crosses open air to the side (`use a gusset instead`); no overhang or free edge at the click; any of a gusset's reasons | says why, in the ghost |
+
+### Auto can use: gussets and hoops in Auto — `web/fins/gussets.js`
+
+Not printed yet. Four boxes say what Auto and Full coverage may place: **Straight
+walls** (on), **Curved walls** (off; above), **Gussets** and **Hoops** (both off, so Auto
+is unchanged until they're ticked). Each gusset or hoop is built by `gussetAt` /
+`hoopAt` exactly as a drawn one, from a "click" found here; everything in the two
+tables above applies. Runs after the walls (Full's fill included) and before the
+sway braces.
+
+| feature | value | rationale |
+|---|---|---|
+| what it aims at | the red the walls leave bare, and the red a wall **≥ 10 mm** tall (`AUTO_GUSSET.minWall`) holds that no staying support holds; held as Full coverage measures it (`reachOf`, `fillReach`) | the same scoreboard as the fill, so "held" means one thing |
+| the side | from a red point, **0.5 mm** under it, the solid looked for in **16** directions; the nearest two upright faces (≤ 30° lean) whose normal points back at the red | the side under the overhang, wherever it is round the point |
+| reach | out along the side's normal while the underside stays within **3 mm** of where it started (`AUTO_GUSSET.rise`), less 0.3 mm; then **0.7 ×** that if refused | to the overhang's edge, not up the next step |
+| gusset or hoop | a hoop first where the overhang there has a closed free edge (a hole); else a gusset; a hoop if no gusset stands | a gusset straight out runs under the hole |
+| swapping a wall | tallest first, at most **12**: kept unless it is **≥ 3 ×** (`AUTO_GUSSET.taller`) as tall as the gussets that replace it **and** they hold **≥ 95 %** (`AUTO_GUSSET.held`) of its red | a short wall is sturdy and leaves no tine marks up the side |
+| how many | most red first, a point near (2 mm) one that failed not tried again; **60** tries for the bare red, **40** per wall | bounded on a big part |
+| Straight walls unticked | Auto's straight walls and wedges dropped first (a curved wall stays), so only the curves, gussets and hoops hold the part | the user's choice; the readout says what's bare |
+| Worker | the topology keeps its vertex ids when Hoops is ticked (`hoop.js edgesFrom` follows the edge by them) | dropped otherwise, as before |
 
 ## Joined walls and ties (Full coverage) — `web/fins/fill.js`, `web/prop/ties.js`
 

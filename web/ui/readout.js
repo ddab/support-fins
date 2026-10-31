@@ -343,10 +343,15 @@ function updateFinReadout(built, ms) {
     // Named apart so the readout is honest: the support fins sit on the overhangs
     // (tined when the toggle is on), the props are the fallback under ledges too
     // flat to take a fin. "N fins" alone would hide which is which.
-    const p = built.propCount, b = built.braceCount;
+    // Auto's gussets and hoops (fins/gussets.js) are counted in with the walls: named
+    // on their own, as Draw names its gussets
+    const g = (built.fins ?? []).filter((f) => f.kind === 'gusset').length;
+    const tined = built.autoGussets?.tined;
+    const p = built.propCount - (tined ? 0 : g), b = built.braceCount - (tined ? g : 0);
     const seg = [];
     if (b) seg.push(tn('{n} support fin', '{n} support fins', b) + (built.tines ? ' · ' + tineCount(built.tines) : ''));
     if (p) seg.push(tn('{n} prop', '{n} props', p));
+    if (g) seg.push(tn('{n} gusset', '{n} gussets', g) + (!b && built.tines ? ' · ' + tineCount(built.tines) : ''));
     autoTxt = seg.join(' + ');
   } else {
     autoTxt = n

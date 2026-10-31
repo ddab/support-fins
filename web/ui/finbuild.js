@@ -122,6 +122,10 @@ export function finOpts(isl = islands) {
            tallRibs: el('tall-ribs').checked,     // face ribs on tall walls (fins/tall.js)
            // Curved walls (prop/curved.js): Auto and Full only, like sway
            curvedWalls: autoLike() && el('curved-walls').checked ? true : undefined,
+           // Auto can use (fins/gussets.js): Auto and Full only, like the curves
+           straightWalls: autoLike() && !el('straight-walls').checked ? false : undefined,
+           autoGussets: autoLike() && el('auto-gussets').checked ? true : undefined,
+           autoHoops: autoLike() && el('auto-hoops').checked ? true : undefined,
            tines: el('tines').checked,
            tineDensity: el('tine-density').valueAsNumber / 100,
            layerHeight: el('layer-height').valueAsNumber,
@@ -262,7 +266,7 @@ export function refreshFins() {
   // threw DataCloneError, leaving the build wedged. Send a shallow copy without
   // the cache (the worker rebuilds its own grid), and if a clone ever fails
   // anyway, build inline so the UI can never get stuck waiting on a reply.
-  const topoMsg = workerTopology(topology);
+  const topoMsg = workerTopology(topology, lastOpts);
   try {
     worker.postMessage({ id: finGen, topology: topoMsg, result: lastResult, rot: rotM3.elements, opts: lastOpts });
   } catch (err) {
@@ -276,10 +280,13 @@ export function refreshFins() {
 }
 
 /** `topo` as a Worker build takes it: without the page's caches (see refreshFins). */
-export function workerTopology(topo) {
+export function workerTopology(topo, opts = {}) {
   const msg = { ...topo };
   delete msg._insideGrid;
-  delete msg.vid;         // islands.js's too: the engine never reads it (19 MB at 1.5M faces)
+  // islands.js's too, and the engine never reads it (19 MB at 1.5M faces) -- but for
+  // Auto's hoops, which follow the overhang's edge by it (hoop.js edgesFrom)
+  if (!opts.autoHoops) delete msg.vid;
+  delete msg._hoopNbr;    // hoop.js's neighbour lists, rebuilt in the Worker
   delete msg._vgraph;     // islands.js's vertex graph: the page's, and big (6 ints a face)
   return msg;
 }

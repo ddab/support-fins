@@ -542,6 +542,29 @@
         <input type="number" id="sway-cross-height" min="10" max="90" step="1" value="50">
       </label>
     </div>
+    <!-- Auto can use (fins/gussets.js): which kinds of support Auto and Full coverage may
+         place. Straight walls are Auto's walls from the plate (on by default); Curved walls
+         bend them with a curved overhang. Gussets and hoops stand off an upright side of the
+         part instead: under red the walls left bare, and in place of a wall
+         AUTO_GUSSET.taller x as tall as they are. Off by default. Hidden in Draw. -->
+    <div class="group" id="auto-uses">
+      <h5 data-i18n="Auto can use">Auto can use</h5>
+      <label data-tip-pic="straight-walls" data-i18n-title class="check" id="straight-walls-fld" title="Walls that stand on the build plate (or on the part below) under each overhang. Untick to leave the overhangs to the curved walls, gussets and hoops.">
+        <input type="checkbox" id="straight-walls" checked><span data-i18n="Straight walls">Straight walls</span> <span class="mut" data-i18n="from the plate">from the plate</span>
+      </label>
+      <!-- Curved walls (#25, prop/curved.js): a bending downhill wall wins its region
+           when it holds as much as the straight walls, whatever it weighs. Off by
+           default; Auto and Full only (hidden in Draw, ui/settings.js). -->
+      <label data-tip-pic="curved-walls" data-i18n-title class="check" id="curved-walls-fld" title="Let the walls under a curved overhang bend with it down to the plate wherever they can, even at more plastic. Extra walls cover what the curves miss. Auto and Full coverage only.">
+        <input type="checkbox" id="curved-walls"><span data-i18n="Curved walls">Curved walls</span> <span class="mut" data-i18n="follow the curve, more plastic">follow the curve, more plastic</span>
+      </label>
+      <label data-tip-pic="auto-gussets" data-i18n-title class="check" id="auto-gussets-fld" title="Gussets off an upright side of the part: under an overhang no wall reached, and instead of a wall at least 3 times as tall as the gussets that hold the same overhang. Their tines mark the side.">
+        <input type="checkbox" id="auto-gussets"><span data-i18n="Gussets">Gussets</span> <span class="mut" data-i18n="off the side">off the side</span>
+      </label>
+      <label data-tip-pic="auto-hoops" data-i18n-title class="check" id="auto-hoops-fld" title="Hoops round the edge of an overhang with a hole in it, or where a gusset can't stand: tined to the side at both ends, the middle left open.">
+        <input type="checkbox" id="auto-hoops"><span data-i18n="Hoops">Hoops</span> <span class="mut" data-i18n="round a hole">round a hole</span>
+      </label>
+    </div>
     <div class="group">
       <h5 data-i18n="Where supports go">Where supports go</h5>
       <!-- Wide-face row density: an overhang face too wide for one corner brace gets a
@@ -573,12 +596,6 @@
            patch fill alone (shorter walls, less plastic). -->
       <label data-tip-pic="long-walls" data-i18n-title class="check" id="long-walls-fld" hidden title="Full coverage lays rows of long walls along the part's length first, the way you'd draw them by hand, then fills what they miss. Holds more of the overhang and uses more plastic. Untick for short walls under each overhang patch.">
         <input type="checkbox" id="long-walls" checked><span data-i18n="Long walls">Long walls</span> <span class="mut" data-i18n="along the part">along the part</span>
-      </label>
-      <!-- Curved walls (#25, prop/curved.js): a bending downhill wall wins its region
-           when it holds as much as the straight walls, whatever it weighs. Off by
-           default; Auto and Full only (hidden in Draw, ui/settings.js). -->
-      <label data-tip-pic="curved-walls" data-i18n-title class="check" id="curved-walls-fld" title="Let the walls under a curved overhang bend with it down to the plate wherever they can, even at more plastic. Extra walls cover what the curves miss. Auto and Full coverage only.">
-        <input type="checkbox" id="curved-walls"><span data-i18n="Curved walls">Curved walls</span> <span class="mut" data-i18n="follow the curve, more plastic">follow the curve, more plastic</span>
       </label>
     </div>
     <div class="group">

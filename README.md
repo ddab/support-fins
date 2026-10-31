@@ -187,6 +187,26 @@ behaviour on a plate with a rounded, holed tab (`hoop_tab.stl`), a tube with eye
 on its inner lips (`eyelet_rim.stl`), and a tube with a round boss through its wall
 (`boss_tube.stl`).
 
+#### Gussets and hoops in Auto
+
+Auto can place gussets and hoops itself. Under **More settings › Auto can use**, tick
+**Gussets** and/or **Hoops** (both off by default, so Auto doesn't change until you do).
+Auto then:
+
+- keeps its short walls from the plate: they're sturdy and don't mark the side;
+- swaps a tall wall for gussets when the wall is at least 3 times as tall as the gussets
+  and they hold the same overhang, like a 69 mm wall from the plate under a boss half
+  way up a tube;
+- puts gussets under overhang no wall reached, like a tab sticking out of a side with
+  nothing under it, or anything over the part with **Plate only** ticked;
+- uses a hoop where the overhang has a hole in it, or where a gusset won't fit.
+
+**Straight walls** and **Curved walls** are in the same group: untick Straight walls to
+leave everything to the curves, gussets and hoops. The readout counts the gussets
+apart from the walls. The rules and numbers are in `docs/FIN-SPEC.md` ("Auto can use"),
+the code is `web/fins/gussets.js`, and `tests/autogusset.test.js` pins it on the three
+test parts. **Not printed yet.**
+
 ### The "no config, geometry only" notice
 
 Opening the 3MF, **Bambu Studio** ("invalid config, load geometry data only") and

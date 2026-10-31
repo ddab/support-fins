@@ -86,7 +86,7 @@ function build(m, key) {
   const w = getWorker();
   if (w) {
     try {
-      w.postMessage({ id: job.id, topology: workerTopology(topo), result: res, rot, opts });
+      w.postMessage({ id: job.id, topology: workerTopology(topo, opts), result: res, rot, opts });
       return;
     } catch (err) {
       console.warn('parked support build: postMessage failed; building inline', err);

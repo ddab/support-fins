@@ -24,6 +24,17 @@ const KEYS = {
     'A gusset that follows an overhang’s edge round and back to the side, leaving the middle open: click the side, then the overhang',
     'Gusset',
     'A fin off a side of the part, up under an overhang: click the side, then the overhang',
+    // Auto can use (fins/gussets.js)
+    'Auto can use',
+    'Straight walls',
+    'from the plate',
+    'Gussets',
+    'off the side',
+    'Hoops',
+    'round a hole',
+    'Walls that stand on the build plate (or on the part below) under each overhang. Untick to leave the overhangs to the curved walls, gussets and hoops.',
+    'Gussets off an upright side of the part: under an overhang no wall reached, and instead of a wall at least 3 times as tall as the gussets that hold the same overhang. Their tines mark the side.',
+    "Hoops round the edge of an overhang with a hole in it, or where a gusset can't stand: tined to the side at both ends, the middle left open.",
   ],
   'web/ui/walls.js': [
     'Click a side of the part under an overhang, then the point on the overhang the gusset should reach out to. It runs square off the side, its underside climbing at {angle}° so nothing under it touches the plate. Backspace takes back the side; Esc or right-click cancels.',
