@@ -662,6 +662,7 @@ body.no-part #viewport canvas { pointer-events: none; }
 #draw-controls[hidden] { display: none; }
 #draw-bucket { display: flex; align-items: center; justify-content: center; gap: 6px; }
 #draw-bucket[hidden] { display: none; }
+#draw-bucket .ico { width: 14px; height: 14px; flex: none; }
 .draw-hint {
   margin: 0;
   max-width: 22ch;
