@@ -1,0 +1,35 @@
+{
+  "scene": {
+    "name": "stress-hoop_tab-x40",
+    "model": "hoop_tab",
+    "rot": [
+      40,
+      0,
+      0
+    ]
+  },
+  "walls": 1,
+  "tines": 4,
+  "unserved": 0,
+  "triangles": 240,
+  "padTriangles": 960,
+  "fins": [
+    {
+      "kind": "prop",
+      "height": 7.771,
+      "length": 8.523,
+      "tines": 0,
+      "from": [
+        -3.082,
+        9.342,
+        7.771
+      ],
+      "to": [
+        -3.082,
+        0.819,
+        0.62
+      ]
+    }
+  ],
+  "sha256": "2694d02848f833805b38f56ccde05a6f4c0ed124a90e60ada880929bb722ad31"
+}
