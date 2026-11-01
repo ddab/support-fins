@@ -542,4 +542,5 @@ export default {
   "Cut square to the Y axis (front–back), keeping the half away from you.": "اقطع عموديًا على المحور Y (أمام–خلف)، مع إبقاء النصف الأبعد عنك.",
   "Cut square to the Z axis (up–down), keeping the half away from you.": "اقطع عموديًا على المحور Z (أعلى–أسفل)، مع إبقاء النصف الأبعد عنك.",
   "Where the cut is: drag to slide it from one end of the part to the other (Shift + scroll also works).": "موضع القطع: اسحب لتحريكه من طرف القطعة إلى الطرف الآخر (Shift + التمرير يعمل أيضًا).",
+  "the face curves over past 45° near the plate there, so a brace can’t follow it up — try a steeper part of the side": "ينحني السطح هناك بأكثر من 45° قرب سطح الطباعة، فلا تستطيع دعامة منع التمايل أن تتبعه إلى الأعلى — اختر جزءًا أشد انحدارًا من الجانب",
 };

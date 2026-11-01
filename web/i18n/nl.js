@@ -538,4 +538,5 @@ export default {
   "Cut square to the Y axis (front–back), keeping the half away from you.": "Snijd haaks op de Y-as (voor–achter); de helft van u af blijft staan.",
   "Cut square to the Z axis (up–down), keeping the half away from you.": "Snijd haaks op de Z-as (boven–onder); de helft van u af blijft staan.",
   "Where the cut is: drag to slide it from one end of the part to the other (Shift + scroll also works).": "Waar de snede ligt: sleep om hem van het ene eind van het onderdeel naar het andere te schuiven (Shift + scrollen werkt ook).",
+  "the face curves over past 45° near the plate there, so a brace can’t follow it up — try a steeper part of the side": "het vlak buigt daar al vlak bij het bed voorbij 45° over, dus een schoor kan het niet omhoog volgen — kies een steiler deel van de zijkant",
 };

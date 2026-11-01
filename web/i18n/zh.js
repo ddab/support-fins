@@ -651,4 +651,5 @@ export default {
   "Cut square to the Y axis (front–back), keeping the half away from you.": "垂直于 Y 轴（前后）剖切，保留离你较远的一半。",
   "Cut square to the Z axis (up–down), keeping the half away from you.": "垂直于 Z 轴（上下）剖切，保留离你较远的一半。",
   "Where the cut is: drag to slide it from one end of the part to the other (Shift + scroll also works).": "剖切位置：拖动可将它从零件一端移到另一端（Shift + 滚轮也可以）。",
+  "the face curves over past 45° near the plate there, so a brace can’t follow it up — try a steeper part of the side": "那里的面在靠近热床处就弯过了 45°，防晃撑没法顺着它往上 —— 请选侧面更陡的部分",
 };

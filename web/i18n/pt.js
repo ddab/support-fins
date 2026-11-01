@@ -628,4 +628,5 @@ export default {
   "Cut square to the Y axis (front–back), keeping the half away from you.": "Cortar perpendicular ao eixo Y (frente–trás), mantendo a metade mais longe de si.",
   "Cut square to the Z axis (up–down), keeping the half away from you.": "Cortar perpendicular ao eixo Z (cima–baixo), mantendo a metade mais longe de si.",
   "Where the cut is: drag to slide it from one end of the part to the other (Shift + scroll also works).": "Onde fica o corte: arraste para o deslizar de uma ponta da peça à outra (Shift + roda também funciona).",
+  "the face curves over past 45° near the plate there, so a brace can’t follow it up — try a steeper part of the side": "a face se curva além de 45° perto da mesa nesse ponto, então uma escora não consegue acompanhá-la para cima — escolha uma parte mais íngreme da lateral",
 };
