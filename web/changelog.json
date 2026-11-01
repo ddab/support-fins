@@ -132,6 +132,21 @@
       "date": "2026-10-31",
       "check": "held",
       "text": "A brace placed by hand now follows a side that curves up its height, convex or concave, instead of only standing on flat spots."
+    },
+    {
+      "date": "2026-10-30",
+      "check": "held",
+      "text": "Draw has Hoops: a gusset that follows an overhang's edge round and back to the side, leaving the middle open, for a hole in a tab or an eyelet on a lip. Gussets now reach down to 1 mm, so a 2 mm lip can have one."
+    },
+    {
+      "date": "2026-10-31",
+      "check": "held",
+      "text": "Auto can use gussets and hoops: tick them under More settings › Auto can use, and Auto puts them under overhangs no wall reached and in place of walls much taller than they are."
+    },
+    {
+      "date": "2026-11-01",
+      "check": "easy",
+      "text": "Draw's paint bucket fills a whole overhang with the Line, Curve, Gusset or Hoop you picked, and the Section view can cut across X, Y or Z with a slider for where."
     }
   ]
 }
