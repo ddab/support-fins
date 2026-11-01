@@ -444,6 +444,10 @@
       <button type="button" class="btn sm" data-shape="gusset" aria-pressed="false" data-i18n="Gusset" data-i18n-title title="A fin off a side of the part, up under an overhang: click the side, then the overhang">Gusset</button>
       <button type="button" class="btn sm" data-shape="hoop" aria-pressed="false" data-i18n="Hoop" data-i18n-title title="A gusset that follows an overhang’s edge round and back to the side, leaving the middle open: click the side, then the overhang">Hoop</button>
     </div>
+    <!-- Paint bucket (fins/bucket.js, ui/walls.js): with it on, a click on a red
+         overhang fills all of it with the shape picked above. -->
+    <button type="button" class="btn sm" id="draw-bucket" aria-pressed="false" data-i18n-title
+            title="Paint bucket: click a red overhang to fill all of it with the shape picked above. Click again to place one at a time."><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 7.5 7 3l5 5-4.5 4.5a1.4 1.4 0 0 1-2 0l-3-3a1.4 1.4 0 0 1 0-2zM2.5 7.5h9.5M5 1.5 7 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M13.5 10.5s1.2 1.6 1.2 2.4a1.2 1.2 0 0 1-2.4 0c0-.8 1.2-2.4 1.2-2.4z" fill="currentColor"/></svg><span data-i18n="Fill an overhang">Fill an overhang</span></button>
     <p class="draw-hint" id="draw-hint" data-i18n-html="Click two points across an overhang — straight onto the red faces — to lay a breakaway wall along that line. Hover an upright side to preview a sway brace: its top follows the cursor, and near the top of the side it runs full height. Click to stand it. Esc or right-click cancels.">Click two points across an overhang — straight onto the red faces — to lay a breakaway wall along that line. Hover an upright side to preview a sway brace: its top follows the cursor, and near the top of the side it runs full height. Click to stand it. Esc or right-click cancels.</p>
     <div class="draw-btns">
       <button class="btn sm" id="draw-back" hidden data-i18n-title
@@ -732,6 +736,24 @@
             title="Show the other side of the cut instead.">Flip</button>
     <button type="button" class="btn sm" id="section-reset" data-i18n-title data-i18n="Re-aim"
             title="Aim the cut at the current view again, through the part's centre.">Re-aim</button>
+    <!-- Square to an axis, and where along it (like a CAD section analysis): the
+         slider runs the cut from one end of the part to the other. -->
+    <div class="vb-row section-axis">
+      <span class="lbl" data-i18n="Cut across">Cut across</span>
+      <span class="seg" role="group" aria-label="Cut across">
+        <button type="button" class="btn sm" data-axis="x" aria-pressed="false" data-i18n-title
+                title="Cut square to the X axis (left–right), keeping the half away from you.">X</button><button
+                type="button" class="btn sm" data-axis="y" aria-pressed="false" data-i18n-title
+                title="Cut square to the Y axis (front–back), keeping the half away from you.">Y</button><button
+                type="button" class="btn sm" data-axis="z" aria-pressed="false" data-i18n-title
+                title="Cut square to the Z axis (up–down), keeping the half away from you.">Z</button>
+      </span>
+    </div>
+    <div class="vb-row section-at">
+      <input type="range" id="section-at" min="0" max="1000" step="1" value="500" data-i18n-title
+             title="Where the cut is: drag to slide it from one end of the part to the other (Shift + scroll also works).">
+      <span class="readout" id="section-mm"></span>
+    </div>
   </div>
   <!-- View cube (#350, ui/viewcube.js): turns with the camera; click a face, edge or
        corner to look from there, drag to orbit. The View popover's buttons are the

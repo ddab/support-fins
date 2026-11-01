@@ -24,7 +24,7 @@
  * other supports), from a "click" found here: the side nearest a red point, just
  * under it, and the overhang out to its edge along that side's normal.
  */
-import { GUSSET, gussetAt, gussetDir, undersideAt } from '../gusset.js';
+import { GUSSET, gussetAt, gussetDir, sideNormal, undersideAt } from '../gusset.js';
 import { edgesFrom, hoopAt } from '../hoop.js';
 import { insidePart } from '../inside.js';
 import { PROP } from '../prop.js';
@@ -154,18 +154,21 @@ function finFor(ctx, p, others) {
     // a hole in the overhang here: a gusset straight out would run under it
     const holed = ctx.hoops && (edgesFrom(ctx.topo, ctx.rot, tris, p, z) ?? []).some((e) => e.closed);
     const hoop = () => (ctx.hoops ? hoopAt(s.w, p, s.face, tris, opts) : null);
-    let r = holed ? hoop() : null;
+    let r = holed ? hoop() : null, o = p;
     if (!r?.ok && ctx.gussets) {
       const reach = reachOut(tris, s.w, s.dir, z);
       for (const u of [reach, reach * 0.7]) {
         if (u < GUSSET.minReach) break;
-        r = gussetAt(s.w, [s.w[0] + s.dir[0] * u, s.w[1] + s.dir[1] * u, p[2]], s.face, tris, opts);
+        o = [s.w[0] + s.dir[0] * u, s.w[1] + s.dir[1] * u, p[2]];
+        r = gussetAt(s.w, o, s.face, tris, opts);
         if (r.ok) break;
       }
     }
-    if (!r?.ok && !holed) r = hoop();
+    if (!r?.ok && !holed) { o = p; r = hoop(); }
     if (r?.ok) {
+      // `at`: the two clicks and the side that stand it by hand (the Draw bucket's)
       return { r, fin: { kind: 'gusset', ...(r.hoop ? { hoop: true } : {}), auto: true,
+                         at: { w: s.w, o, n: sideNormal(ctx.topo, s.face) },
                          height: r.height, length: r.hoop ? r.length : r.reach, span: r.hoop ? r.length : r.reach,
                          tines: r.tines + r.sideTines, rows: 0, stilt: 0, lean: 0, bearing: 0, site: null,
                          line: r.top.map((q) => [q[0], q[1], q[2] - PROP.gap]) } };

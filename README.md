@@ -207,6 +207,28 @@ apart from the walls. The rules and numbers are in `docs/FIN-SPEC.md` ("Auto can
 the code is `web/fins/gussets.js`, and `tests/autogusset.test.js` pins it on the three
 test parts. **Not printed yet.**
 
+#### Fill an overhang (paint bucket)
+
+In **Draw**, pick **Line**, **Curve**, **Gusset** or **Hoop**, then turn on **Fill an
+overhang** (the paint bucket under them). Hovering a red overhang lights all of it; a
+click fills it with every support of that shape that fits, placed the way Auto would
+place them under that one overhang. Each lands as an ordinary drawn support, so you can
+click one to select it and remove it, and one Undo takes back the whole fill. A small
+bore that Auto leaves bare on purpose is filled too when you click it. If nothing of
+that shape fits (a gusset with no upright side under the overhang, a hoop with no hole
+or edge to follow), the readout says so. Click the button again to go back to placing
+one at a time. The code is `web/fins/bucket.js`, tested in `tests/bucket.test.js`.
+
+### Section view: cut across an axis
+
+The **Section** badge under the view cuts the part with a plane, so you can see and
+draw inside it. Its popover now also has **Cut across X / Y / Z**, which squares the
+cut to one of the bed's axes and keeps the half away from you, and a slider that slides
+the cut from one end of the part to the other, with the distance in mm. **Ghost** shows
+the cut-away half as faint glass, **Hide** leaves it out, and the arrow, rings, sheet
+and Shift + scroll still move the cut as before. It only changes the view: the export
+is always the whole part.
+
 ### The "no config, geometry only" notice
 
 Opening the 3MF, **Bambu Studio** ("invalid config, load geometry data only") and

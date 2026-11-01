@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { drawnWall } from '../draw.js';
 import { GUSSET, gussetAt, gussetDir, sideNormal } from '../gusset.js';
 import { hoopAt } from '../hoop.js';
+import { bucketFill } from '../fins/bucket.js';
 import { arcThrough, arcStations } from '../drawarc.js';
 import { planGrid } from '../fins/tall.js';
 import { boxGrid } from '../fins/fill.js';
@@ -25,7 +26,7 @@ import { updateReadout } from './readout.js';
 import { pickFace } from './pose.js';
 import { part, topology, rotM3, lastResult, updateFit } from './part.js';
 import { finsVisible, finMode, autoLike, drawAugment } from './settings.js';
-import { lastBuilt, swayOpts } from './finbuild.js';
+import { lastBuilt, swayOpts, finOpts } from './finbuild.js';
 
 // ---- draw mode: the user places breakaway walls by hand --------------------
 // A drawn wall IS the same kind of support the auto-placer emits, so it shares
@@ -157,6 +158,7 @@ export function clearPreview() {
   drawDot.visible = drawDot2.visible = drawCursor.visible = drawBand.visible = false;
   dropGhost();
   showGhostMsg('');
+  showFill(null);
   syncBack();
 }
 
@@ -664,6 +666,7 @@ const braceRest = onRest((q) => {
 renderer.domElement.addEventListener('pointerleave', () => {
   braceRest.cancel();
   if (!drawStart) { drawCursor.visible = false; braceShown = null; hideBrace(false); }
+  showFill(null);
 });
 
 /** The pointer is on the part but off an upright side: the dot follows it, and the
@@ -700,13 +703,100 @@ function placeSway(hit) {
   updateFit();
 }
 
+// ---- the paint bucket: click an overhang, it fills with the shape picked ------
+// Not a fifth shape but a way of placing the four: with it on, hovering a red
+// overhang lights the whole of it, and a click lays every Line, Curve, Gusset or Hoop
+// (whichever is picked) Auto would stand under that one overhang (fins/bucket.js).
+// They go in as drawn supports, so each can be selected and removed; one Undo takes
+// the whole fill back.
+let drawBucket = false;
+export const drawBucketOn = () => drawBucket;
+
+/** The overhang (analyze's region) face `f` is in, or null: indexed once per analysis. */
+let regionIdx = { res: null, map: null };
+function regionAtFace(f) {
+  if (regionIdx.res !== lastResult) {
+    const map = new Int32Array(topology.nFaces).fill(-1);
+    lastResult.regions.forEach((g, i) => { for (const k of g.faces) map[k] = i; });
+    regionIdx = { res: lastResult, map };
+  }
+  const i = regionIdx.map[f];
+  return i >= 0 ? lastResult.regions[i] : null;
+}
+
+// The overhang under the cursor, lit: its faces again, on the part (so it turns with
+// it), a hair in front of the red.
+const fillMat = new THREE.MeshBasicMaterial({
+  color: 0x4da3ff, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false,
+  polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, clippingPlanes: clip,
+});
+let fillMesh = null, fillShown = null;
+function showFill(g) {
+  if (g === fillShown) return;
+  if (fillMesh) { fillMesh.parent?.remove(fillMesh); fillMesh.geometry.dispose(); fillMesh = null; }
+  fillShown = g;
+  if (!g || !part) return;
+  const pos = topology.pos, a = new Float32Array(g.faces.length * 9);
+  g.faces.forEach((f, k) => a.set(pos.subarray(f * 9, f * 9 + 9), k * 9));
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(a, 3));
+  fillMesh = new THREE.Mesh(geo, fillMat);
+  part.add(fillMesh);
+}
+
+/** Fill the overhang face `face` is in with the shape picked. */
+function fillAt(face) {
+  if (!regionAtFace(face)) {
+    drawMsg = t('couldn’t fill there: {reason}', { reason: t('click a red overhang') });
+    updateReadout(lastBuilt);
+    return;
+  }
+  drawMsg = t('filling the overhang…');
+  updateReadout(lastBuilt);
+  renderer.domElement.style.cursor = 'progress';
+  // a beat for the message to show: an overhang with many walls takes a second
+  setTimeout(() => {
+    const r = bucketFill(topology, lastResult, rotM3.elements, face, drawShape, finOpts());
+    renderer.domElement.style.cursor = '';
+    if (!r.ok) {
+      drawMsg = t('couldn’t fill there: {reason}', { reason: t(r.why) });
+      updateReadout(lastBuilt);
+      return;
+    }
+    histPush();
+    part.updateMatrixWorld();
+    const local = (p) => part.worldToLocal(new THREE.Vector3(p[0], p[1], p[2]));
+    for (const w of r.walls) {
+      drawnWalls.push(w.kind
+        ? { kind: w.kind, ...(w.hoop ? { hoop: true } : {}), n: w.n, a: local(w.a), b: local(w.b) }
+        : { a: local(w.a), b: local(w.b), ...(w.m ? { m: local(w.m) } : {}) });
+    }
+    drawMsg = tn('filled the overhang with {n} support', 'filled the overhang with {n} supports', r.walls.length);
+    showFill(null);
+    rebuildDrawn();
+    updateReadout(lastBuilt);
+    updateFit();
+  }, 30);
+}
+
+el('draw-bucket').addEventListener('click', () => {
+  drawBucket = !drawBucket;
+  clearPreview();   // a wall half drawn by clicks starts over
+  updateReadout(lastBuilt);
+  syncDrawControls();
+});
+
 /** Show Clear whenever hand-drawn walls are shown (they stay in Suggest after
  *  "+ Add" is switched off), but the click hint only while a click places one. */
 export function syncDrawControls() {
   el('draw-controls').hidden = !drawShown();
-  el('draw-hint').hidden = el('draw-shape').hidden = !drawActive();
+  el('draw-hint').hidden = el('draw-shape').hidden = el('draw-bucket').hidden = !drawActive();
   for (const b of el('draw-shape').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.shape === drawShape));
-  el('draw-hint').innerHTML = drawShape === 'hoop'
+  el('draw-bucket').setAttribute('aria-pressed', String(drawBucket));
+  el('draw-bucket').classList.toggle('primary', drawBucket);
+  el('draw-hint').innerHTML = drawBucket
+    ? t('Hover a red overhang to light it, then click to fill all of it with the shape picked above — every one that fits, as Auto would place them. Each is a drawn support: click one to select it and remove it. Undo takes back the whole fill.')
+    : drawShape === 'hoop'
     ? t('Click a side of the part under an overhang, then the overhang. The hoop follows the overhang’s edge out and round back to the side, leaving the middle open, its underside climbing at {angle}° from both ends. Backspace takes back the side; Esc or right-click cancels.', { angle: GUSSET.angle })
     : drawShape === 'gusset'
     ? t('Click a side of the part under an overhang, then the point on the overhang the gusset should reach out to. It runs square off the side, its underside climbing at {angle}° so nothing under it touches the plate. Backspace takes back the side; Esc or right-click cancels.', { angle: GUSSET.angle })
@@ -754,6 +844,13 @@ export function markPrintTrisDirty() { printTrisDirty = true; }
 /** Pointer move: the cursor, band and ghost wall track the surface under it. */
 export function drawHover(ev) {
   const hit = pickFace(ev);
+  if (drawBucket) {
+    const g = hit ? regionAtFace(hit.faceIndex) : null;
+    showFill(g);
+    drawCursor.visible = drawBand.visible = false;
+    if (renderer.domElement.style.cursor !== 'progress') renderer.domElement.style.cursor = g ? 'cell' : '';
+    return;
+  }
   if (hit && swayHit(hit)) {
     updateBracePreview(hit, ev);
     renderer.domElement.style.cursor = 'crosshair';
@@ -844,6 +941,7 @@ export function drawClick(e) {
   const hit = pickFace(e);
   if (!hit) return;
   if (selectedWall) { selectedWall = null; syncSelection(); }
+  if (drawBucket) { fillAt(hit.faceIndex); return; }
   // With Sway braces on, a single click on an UPRIGHT side stands a brace there;
   // a click on anything else still starts a two-point wall as before.
   if (swayHit(hit)) {

@@ -421,6 +421,21 @@ sway braces.
 | Straight walls unticked | Auto's straight walls and wedges dropped first (a curved wall stays), so only the curves, gussets and hoops hold the part | the user's choice; the readout says what's bare |
 | Worker | the topology keeps its vertex ids when Hoops is ticked (`hoop.js edgesFrom` follows the edge by them) | dropped otherwise, as before |
 
+### Draw's paint bucket — `web/fins/bucket.js`
+
+Not printed yet. With **Fill an overhang** on, a click on a red overhang (one of
+`analyze`'s regions) runs Auto on that region alone and hands back each support as the
+clicks Draw stores. Everything Auto does applies; these are the differences.
+
+| feature | value | rationale |
+|---|---|---|
+| what it aims at | only the clicked region (the rest of the part is treated as needing nothing); a small bore Auto leaves bare (`coverage.js` HOLE) counts as red | it was clicked |
+| Line | Auto's walls and wedges, each cut into straight pieces no further than **1 mm** (`BUCKET.tol`) from its top line; pieces under **2.5 mm** dropped | Draw stores a line as two clicks |
+| Curve | Auto with Curved walls; a bent wall as arcs through three of its points (≥ `DRAW_MIN_RADIUS`), a bend that sags under 0.5 mm laid straight | Draw stores a curve as three clicks |
+| Gusset / Hoop | Auto's gussets (or hoops) with no walls (`straightWalls: false`), each kept as its side's normal, side point and reach (`at` on the fin record) | re-stood exactly as a drawn one |
+| kept | each piece only if `drawnWall` stands it from its clicks (a curve that won't, as the straight piece) | the rebuild never lists one as failed |
+| on the page | inline, not in the Worker; one history step for the whole fill | about half a second for walls or gussets under a 290 mm² overhang, about 3 s for hoops there; the readout says it is filling |
+
 ## Joined walls and ties (Full coverage) — `web/fins/fill.js`, `web/prop/ties.js`
 
 Not printed yet. A figure's fill walls stood apart, each on its own ("all the fins become

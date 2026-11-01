@@ -111,6 +111,7 @@ function syncPlane() {
   nrm.set(0, 0, 1).applyQuaternion(handle.quaternion);
   plane.setFromNormalAndCoplanarPoint(nrm, handle.position);
   ghostPlane.copy(plane).negate();
+  syncAt();
 }
 
 // The handle's pose in the part's frame, so the cut follows the part when it turns.
@@ -395,3 +396,64 @@ el('section-flip').addEventListener('click', () => {
 });
 
 el('section-reset').addEventListener('click', () => { if (sectionOn) aimAtView(); });
+
+// ---- square to an axis, and a slider for where ---------------------------------
+// The bed's axes (Z up), as the view cube draws them. The slider runs the cut across
+// the part along whatever way it faces -- an axis, or wherever the rings tilted it.
+const AXES = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
+const SLIDE = 1000;   // the slider's steps end to end
+const corner = new THREE.Vector3();
+
+/** How far the part runs along `n`: [lo, hi] of p·n over its box's corners. */
+function reach(n) {
+  const b = new THREE.Box3().setFromObject(part);
+  let lo = Infinity, hi = -Infinity;
+  for (let i = 0; i < 8; i++) {
+    corner.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z);
+    const d = corner.dot(n);
+    lo = Math.min(lo, d);
+    hi = Math.max(hi, d);
+  }
+  return [lo, hi];
+}
+
+/** The slider, the mm readout and the axis buttons, from where the cut is now. */
+function syncAt() {
+  if (!sectionOn || !part) return;
+  const n = plane.normal, [lo, hi] = reach(n);
+  const d = handle.position.dot(n);
+  const slider = el('section-at');
+  if (document.activeElement !== slider || !slider.matches(':active')) {
+    slider.value = String(Math.round(THREE.MathUtils.clamp((d - lo) / ((hi - lo) || 1), 0, 1) * SLIDE));
+  }
+  el('section-mm').textContent = `${(d - lo).toFixed(1)} mm`;
+  for (const b of el('section-pop').querySelectorAll('[data-axis]')) {
+    const on = Math.abs(n.dot(AXES[b.dataset.axis])) > 0.9999;
+    b.classList.toggle('primary', on);
+    b.setAttribute('aria-pressed', String(on));
+  }
+}
+
+el('section-at').addEventListener('input', (e) => {
+  if (!sectionOn) return;
+  const n = plane.normal, [lo, hi] = reach(n);
+  const want = lo + (e.target.valueAsNumber / SLIDE) * (hi - lo);
+  handle.position.addScaledVector(n, want - handle.position.dot(n));
+  syncPlane();
+  holdInPart();
+});
+
+for (const b of el('section-pop').querySelectorAll('[data-axis]')) {
+  b.addEventListener('click', () => {
+    if (!sectionOn) setSection(true);
+    // keep the half away from the camera, as Re-aim does; through the part's middle
+    // the first time, else where along the axis the cut already was
+    const a = AXES[b.dataset.axis].clone();
+    if (a.dot(camera.getWorldDirection(new THREE.Vector3())) < 0) a.negate();
+    const wasOn = Math.abs(plane.normal.dot(a)) > 0.9999;
+    if (!wasOn) partBox().getCenter(handle.position);
+    handle.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), a);
+    syncPlane();
+    holdInPart();
+  });
+}
