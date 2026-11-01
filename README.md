@@ -126,7 +126,11 @@ prints without support of its own, and whose top holds up the overhang.
 
 ![Placing a gusset under an upside-down L](docs/images/gusset-place.gif)
 
-**Using it:** in **Draw**, pick **Gusset** (next to Line and Curve). Click the upright side
+**Using it:** in **Draw**, pick **Gusset** from the shape buttons above the hint:
+
+![The Draw shape buttons: Line, Curve, Gusset and Hoop](docs/images/draw-shapes.png)
+
+Click the upright side
 under the overhang, then click the point on the overhang the gusset should reach out to.
 It always runs square off the side. The second click only sets how far it reaches, and the
 preview shows it before you commit. Backspace takes back the first click; Esc or a right
@@ -149,7 +153,11 @@ click cancels. Place as many as you like, side by side.
   tines touch it.
 
 Its top follows whatever it holds up: a sloped or round underside (a boss through a
-wall, say), or a groove or step in it, which the gusset bridges under.
+wall, say), or a groove or step in it, which the gusset bridges under. Under a lip that
+curves along the side, each gusset still runs square off the side, so a few placed
+along it hold the whole curve:
+
+![Two gussets holding a curved lip off the side of a part](docs/images/gusset-curved-lip.png)
 
 A gusset is refused, with the reason, if the side isn't solid where its tines go, if the
 reach is too short, if it would run into the part, or if it would touch another support
@@ -189,45 +197,98 @@ on its inner lips (`eyelet_rim.stl`), and a tube with a round boss through its w
 
 #### Gussets and hoops in Auto
 
-Auto can place gussets and hoops itself. Under **More settings › Auto can use**, tick
-**Gussets** and/or **Hoops** (both off by default, so Auto doesn't change until you do).
-Auto then:
+Auto can place gussets and hoops itself. Open **More settings** and find the **Auto can
+use** group. Its four boxes say which kinds of support Auto (and Full coverage) may
+place:
 
-- keeps its short walls from the plate: they're sturdy and don't mark the side;
-- swaps a tall wall for gussets when the wall is at least 3 times as tall as the gussets
-  and they hold the same overhang, like a 69 mm wall from the plate under a boss half
-  way up a tube;
-- puts gussets under overhang no wall reached, like a tab sticking out of a side with
-  nothing under it, or anything over the part with **Plate only** ticked;
-- uses a hoop where the overhang has a hole in it, or where a gusset won't fit.
+![The Auto can use group: Straight walls, Curved walls, Gussets and Hoops](docs/images/auto-can-use.png)
 
-**Straight walls** and **Curved walls** are in the same group: untick Straight walls to
-leave everything to the curves, gussets and hoops. The readout counts the gussets
-apart from the walls. The rules and numbers are in `docs/FIN-SPEC.md` ("Auto can use"),
-the code is `web/fins/gussets.js`, and `tests/autogusset.test.js` pins it on the three
-test parts. **Not printed yet.**
+| Box | Default | What it lets Auto place |
+|---|---|---|
+| **Straight walls** | on | the usual walls standing on the plate (or on the part below) |
+| **Curved walls** | off | walls that follow a curved overhang; more plastic |
+| **Gussets** | off | gussets off an upright side, under overhang the walls can't reach well |
+| **Hoops** | off | hoops round an overhang with a hole in it |
+
+With Gussets and Hoops unticked, Auto builds exactly what it always did. With them
+ticked, Auto decides between a wall and a gusset like this:
+
+1. **Short walls from the plate stay.** They're sturdy and don't leave tine marks on
+   the side.
+2. **A tall wall is swapped for gussets** when the wall is at least 3 times as tall as
+   the gussets would be, and the gussets hold at least 95% of what the wall held. A
+   wall under 10 mm is never swapped. Example: a boss half way up a tube used to get a
+   69 mm wall from the plate; now it gets two short gussets off the tube.
+3. **Overhang still bare gets a gusset** off the nearest upright side: a tab sticking
+   out of a side with nothing under it, or anything over the part with **Plate only**
+   ticked.
+4. **A hoop is used** where the overhang has a hole in it, or where a gusset won't fit.
+
+Every gusset and hoop goes through the same checks as one you draw, so none can run
+into the part or touch another support. Untick **Straight walls** to leave everything
+to the curved walls, gussets and hoops. The readout counts gussets apart from walls,
+e.g. "1 support fin · 10 tines + 2 gussets".
+
+The rules and numbers are in `docs/FIN-SPEC.md` ("Auto can use"), the code is
+`web/fins/gussets.js`, and `tests/autogusset.test.js` pins it on the three test parts.
+**Not printed yet.**
 
 #### Fill an overhang (paint bucket)
 
-In **Draw**, pick **Line**, **Curve**, **Gusset** or **Hoop**, then turn on **Fill an
-overhang** (the paint bucket under them). Hovering a red overhang lights all of it; a
-click fills it with every support of that shape that fits, placed the way Auto would
-place them under that one overhang. Each lands as an ordinary drawn support, so you can
-click one to select it and remove it, and one Undo takes back the whole fill. A small
-bore that Auto leaves bare on purpose is filled too when you click it. If nothing of
-that shape fits (a gusset with no upright side under the overhang, a hoop with no hole
-or edge to follow), the readout says so. Click the button again to go back to placing
-one at a time. The code is `web/fins/bucket.js`, tested in `tests/bucket.test.js`.
+Placing supports one click at a time is slow along a long lip. The paint bucket fills
+a whole overhang at once:
 
-### Section view: cut across an axis
+![Filling a long curved lip with gussets in one click](docs/images/paint-bucket.gif)
 
-The **Section** badge under the view cuts the part with a plane, so you can see and
-draw inside it. Its popover now also has **Cut across X / Y / Z**, which squares the
-cut to one of the bed's axes and keeps the half away from you, and a slider that slides
-the cut from one end of the part to the other, with the distance in mm. **Ghost** shows
-the cut-away half as faint glass, **Hide** leaves it out, and the arrow, rings, sheet
-and Shift + scroll still move the cut as before. It only changes the view: the export
-is always the whole part.
+1. In **Draw**, pick the shape you want: **Line**, **Curve**, **Gusset** or **Hoop**.
+2. Turn on **Fill an overhang** (the bucket button under the shapes).
+3. Hover a red overhang: all of it lights up blue, so you can see what one click covers.
+4. Click it. Every support of that shape that fits goes in, placed the way Auto would
+   place them under that one overhang.
+
+What you get:
+
+- **Line** lays straight walls, **Curve** lays walls that bend where the overhang does,
+  **Gusset** and **Hoop** stand off the upright sides under it.
+- Each support is an ordinary drawn one: click it to select it, then **Delete** or
+  **Remove selected**. One **Undo** takes back the whole fill.
+- A small bore that Auto leaves bare on purpose is filled too, because you clicked it.
+- If nothing of that shape fits (a gusset with no upright side under the overhang, a
+  hoop with no hole or edge to follow), nothing is placed and the readout says why.
+  Try another shape.
+- Filling the same overhang twice adds a second set; Undo removes it.
+- A big overhang takes a moment (about 3 s for hoops on a 290 mm² lip); the readout
+  says "filling the overhang…" meanwhile.
+
+Click **Fill an overhang** again to go back to placing one support at a time. The code
+is `web/fins/bucket.js`, tested in `tests/bucket.test.js`.
+
+### Section view: see inside the part
+
+Supports inside a tube, a box or a bore are hard to see, and hard to click. The
+**Section** badge under the view cuts the part with a plane, like a section analysis
+in CAD, so you can look inside and draw there:
+
+![Cutting a tube across Z, then across Y, and sliding the cut](docs/images/section-cut.gif)
+
+1. Click **Section** in the bar under the view.
+2. Pick **Cut across X**, **Y** or **Z** to cut square to one of the bed's axes. It
+   keeps the half away from you.
+3. Drag the slider to slide the cut from one end of the part to the other; the number
+   beside it is how far in it is, in mm.
+
+More controls in the same popover:
+
+- **Ghost** (the default) shows the cut-away half as faint glass, so you keep your
+  bearings; **Hide** leaves it out. Clicks go through the glass to what's behind it.
+- **Flip** keeps the other half instead.
+- **Re-aim** points the cut at the current view again, through the part's middle.
+- The arrow and rings on the cut push and tilt it by hand; Shift + scroll pushes it
+  1 mm a notch.
+
+Clicks land on the part you can see, so you can draw supports inside while the cut is
+on. It only changes the view: it isn't saved, and the export is always the whole part.
+Click **Section** again to turn it off.
 
 ### The "no config, geometry only" notice
 
