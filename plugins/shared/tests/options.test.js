@@ -57,6 +57,10 @@ const SITE_EXCLUDED = {
   'wall-lines': 'the plugins scale by nozzle diameter but retain 2-line walls (web/nozzle.js)',
   'curved-walls': 'site first, off by default: the plugins build without it until the print test (web/prop/curved.js)',
   'rounded-feet': 'browser FDM opt-in; plugin defaults keep their feet',
+  'straight-walls': 'site first, on by default: the plugins build their walls as before',
+  'auto-gussets': 'site first, off by default: the plugins build without gussets until the print test (web/fins/gussets.js)',
+  'auto-hoops': 'site first, off by default: the plugins build without hoops until the print test (web/fins/gussets.js)',
+  'section-at': 'site display: where the Section view cuts the part',
 };
 
 Deno.test('options.json is well formed', () => {
