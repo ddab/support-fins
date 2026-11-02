@@ -213,13 +213,18 @@ function updateDrawReadout(built, ms) {
   const bad = drawnWalls.length - ok.length;
   const tines = ok.reduce((a, w) => a + (w.info?.tines ?? 0), 0);
   const braces = ok.filter((w) => w.kind === 'sway').length;
-  const walls = ok.length - braces;
+  const gussets = ok.filter((w) => w.kind === 'gusset').length;
+  const walls = ok.length - braces - gussets;
+  // a gusset's side tines are built with Tines off too: counted on their own
+  const sideTines = ok.reduce((a, w) => a + (w.info?.sideTines ?? 0), 0);
   const ribs = ok.reduce((a, w) => a + (w.kind === 'sway' ? 0 : w.info?.braces ?? 0), 0);
   const crosses = ok.reduce((a, w) => a + (w.kind === 'sway' ? w.info?.cross ?? 0 : 0), 0);
   const parts = [];
   if (walls) parts.push(tn('{n} drawn wall', '{n} drawn walls', walls) + (ribs ? ` · ${tn('{n} wall rib', '{n} wall ribs', ribs)}` : ''));
   if (braces) parts.push(tn('{n} sway brace', '{n} sway braces', braces)
     + (crosses ? ` · ${tn('{n} brace rib', '{n} brace ribs', crosses)}` : ''));
+  if (gussets) parts.push(tn('{n} gusset', '{n} gussets', gussets)
+    + (sideTines ? ` · ${tn('{n} side tine', '{n} side tines', sideTines)}` : ''));
   box.textContent = ok.length
     ? parts.join(' + ') + (tines ? ` · ${tineCount(tines)}` : '')
     : t('none yet');
@@ -228,7 +233,13 @@ function updateDrawReadout(built, ms) {
   const lead = [];
   const help = [];
   if (!drawnWalls.length && !drawMsg) {
-    lead.push(drawShapeNow() === 'curve'
+    lead.push(drawShapeNow() === 'gusset'
+      ? t('Click a side of the part under an overhang, then the overhang itself, '
+        + 'to stand a gusset off the side')
+      : drawShapeNow() === 'hoop'
+      ? t('Click a side of the part under an overhang, then the overhang itself, '
+        + 'to stand a hoop round its edge')
+      : drawShapeNow() === 'curve'
       ? t('Click the two ends of a curve on the overhang, then a point it runs through, '
         + 'to lay a curved breakaway wall under it')
       : t('Click two points across an overhang (a line lands right where you '
@@ -255,7 +266,7 @@ function updateDrawReadout(built, ms) {
   }
   if (bad) {
     const one = drawnWalls.find((w) => !w.ok);
-    const reason = one?.info?.reason ? ` (${t(one.info.reason)})` : '';
+    const reason = one?.info?.reason ? ` (${t(one.info.why ?? one.info.reason, one.info.params)})` : '';
     lead.push(tn('{n} wall couldn’t build here{reason}. Undo, or redraw',
                  '{n} walls couldn’t build here{reason}. Undo, or redraw', bad, { reason }));
   }
@@ -332,10 +343,15 @@ function updateFinReadout(built, ms) {
     // Named apart so the readout is honest: the support fins sit on the overhangs
     // (tined when the toggle is on), the props are the fallback under ledges too
     // flat to take a fin. "N fins" alone would hide which is which.
-    const p = built.propCount, b = built.braceCount;
+    // Auto's gussets and hoops (fins/gussets.js) are counted in with the walls: named
+    // on their own, as Draw names its gussets
+    const g = (built.fins ?? []).filter((f) => f.kind === 'gusset').length;
+    const tined = built.autoGussets?.tined;
+    const p = built.propCount - (tined ? 0 : g), b = built.braceCount - (tined ? g : 0);
     const seg = [];
     if (b) seg.push(tn('{n} support fin', '{n} support fins', b) + (built.tines ? ' · ' + tineCount(built.tines) : ''));
     if (p) seg.push(tn('{n} prop', '{n} props', p));
+    if (g) seg.push(tn('{n} gusset', '{n} gussets', g) + (!b && built.tines ? ' · ' + tineCount(built.tines) : ''));
     autoTxt = seg.join(' + ');
   } else {
     autoTxt = n
@@ -400,7 +416,7 @@ function updateFinReadout(built, ms) {
     const bad = drawnWalls.length - drawnOk;
     if (bad) {
       const one = drawnWalls.find((w) => !w.ok);
-      const reason = one?.info?.reason ? ` (${t(one.info.reason)})` : '';
+      const reason = one?.info?.reason ? ` (${t(one.info.why ?? one.info.reason, one.info.params)})` : '';
       lead.push(tn('{n} drawn wall couldn’t attach here{reason}', '{n} drawn walls couldn’t attach here{reason}', bad, { reason }));
     }
     if (drawMsg) lead.push(drawMsg);

@@ -45,7 +45,8 @@ engine is validated against third-party STLs and pinned by an offline test suite
 Working: overhang detection, bed-reachability, contoured breakaway fin walls, orientation +
 load-direction scoring, the combined fin (wall + tines that fuse into the part — the whole
 point; see `docs/FIN-SPEC.md`), optional sway braces that tie tall parts' sides on all
-the way up (auto, or click an upright side in Draw), STL, 3MF, STEP and OBJ import, STL and 3MF export.
+the way up (auto, or click an upright side in Draw), hand-placed gussets that stand off
+an upright side to hold up an overhang above it, STL, 3MF, STEP and OBJ import, STL and 3MF export.
 
 Still open: scale-aware fin profiles, and the bed pad on tilted exports.
 
@@ -115,6 +116,180 @@ braces"); the code is `web/sway.js`, and `tests/sway.test.js` pins its behaviour
 prints (2026-09-22) both came out clean, so the defaults below — depth, thickness and
 tine spacing — are the printed ones, not estimates.
 
+### Gussets: fins off a side of the part
+
+Some overhangs have nothing under them but more part, like the arm of an upside-down L.
+A plate fin can't reach it without standing in the way, and the overhang is often too
+far from the bed to be worth a tall wall anyway. A **gusset** comes off the upright side
+instead. It is a wedge-shaped fin whose underside climbs at 50° from level, so it
+prints without support of its own, and whose top holds up the overhang.
+
+![Placing a gusset under an upside-down L](docs/images/gusset-place.gif)
+
+**Using it:** in **Draw**, pick **Gusset** from the shape buttons above the hint:
+
+![The Draw shape buttons: Line, Curve, Gusset and Hoop](docs/images/draw-shapes.png)
+
+Click the upright side
+under the overhang, then click the point on the overhang the gusset should reach out to.
+It always runs square off the side. The second click only sets how far it reaches, and the
+preview shows it before you commit. Backspace takes back the first click; Esc or a right
+click cancels. Place as many as you like, side by side.
+
+![Two gussets holding up the arm of an upside-down L](docs/images/gusset-app.png)
+
+**How it holds on:**
+
+- **Side tines, always.** One-layer tines tie the gusset's inner edge to the side, with one
+  in its very first layer (so it never starts printing in air), one in its top layer, and
+  the rest at most 2 mm apart. They're built even with Tines off.
+
+  ![Side tines along a gusset's inner edge, from its first layer to its top](docs/images/gusset-side-tines.png)
+
+- **Top tines** bite into the overhang when its underside is sloped and Tines is on. A flat
+  ceiling gets none (horizontal tines have nothing to bite), so the gusset stops 0.2 mm
+  short and the ceiling's first layer bridges onto it, like any other fin.
+- Like every support here, it stands off the part by the breakaway gap, and only the
+  tines touch it.
+
+Its top follows whatever it holds up: a sloped or round underside (a boss through a
+wall, say), or a groove or step in it, which the gusset bridges under. Under a lip that
+curves along the side, each gusset still runs square off the side, so a few placed
+along it hold the whole curve:
+
+![Two gussets holding a curved lip off the side of a part](docs/images/gusset-curved-lip.png)
+
+A gusset is refused, with the reason, if the side isn't solid where its tines go, if the
+reach is too short, if it would run into the part, or if it would touch another support
+(the two would fuse into one piece).
+
+![The printed L with its gusset still attached](docs/images/gusset-print.jpg)
+
+**Status: printed once.** Tested on a 25 × 20 × 35 mm upside-down L (2026-10-28) with
+default settings. The angle, gap and tine spacing are the starting values, not tuned
+from prints yet. The numbers and reasoning are in `docs/FIN-SPEC.md` ("Gussets"), the
+code is `web/gusset.js`, and `tests/gusset.test.js` pins its behaviour.
+
+#### Hoops: a gusset round an overhang's edge
+
+A straight gusset runs square off the side, so under a rounded tab with a screw hole
+in it, it would run straight under the hole. A **hoop** follows the overhang's edge
+instead: out from the side along one edge, round the end and back to the side,
+leaving the middle (and the hole) open.
+
+**Using it:** in **Draw**, pick **Hoop**. Click the side under the overhang, then click
+the overhang. The hoop finds the overhang's edge by itself and runs just inside it.
+A tab on a lip works too, like an eyelet sticking out of a rim inside a tube: the hoop
+goes round the eyelet, then runs straight across under the lip to the wall, curved
+or not.
+Both of its ends are tined to the side, the same way a gusset's inner edge is, with
+Tines on or off. Its underside climbs at the gusset angle along the hoop from each end,
+so it's deepest where it meets the side and shallowest halfway round. It keeps clear
+of the part and of other supports the same way a gusset does.
+
+A hoop is refused, with the reason, if there's no overhang between the tab and the side
+you clicked (use a gusset there), or for any of a gusset's reasons.
+
+**Status: not printed yet.** The code is `web/hoop.js`, and `tests/hoop.test.js` pins its
+behaviour on a plate with a rounded, holed tab (`hoop_tab.stl`), a tube with eyelets
+on its inner lips (`eyelet_rim.stl`), and a tube with a round boss through its wall
+(`boss_tube.stl`).
+
+#### Gussets and hoops in Auto
+
+Auto can place gussets and hoops itself. Open **More settings** and find the **Auto can
+use** group. Its four boxes say which kinds of support Auto (and Full coverage) may
+place:
+
+![The Auto can use group: Straight walls, Curved walls, Gussets and Hoops](docs/images/auto-can-use.png)
+
+| Box | Default | What it lets Auto place |
+|---|---|---|
+| **Straight walls** | on | the usual walls standing on the plate (or on the part below) |
+| **Curved walls** | off | walls that follow a curved overhang; more plastic |
+| **Gussets** | off | gussets off an upright side, under overhang the walls can't reach well |
+| **Hoops** | off | hoops round an overhang with a hole in it |
+
+With Gussets and Hoops unticked, Auto builds exactly what it always did. With them
+ticked, Auto decides between a wall and a gusset like this:
+
+1. **Short walls from the plate stay.** They're sturdy and don't leave tine marks on
+   the side.
+2. **A tall wall is swapped for gussets** when the wall is at least 3 times as tall as
+   the gussets would be, and the gussets hold at least 95% of what the wall held. A
+   wall under 10 mm is never swapped. Example: a boss half way up a tube used to get a
+   69 mm wall from the plate; now it gets two short gussets off the tube.
+3. **Overhang still bare gets a gusset** off the nearest upright side: a tab sticking
+   out of a side with nothing under it, or anything over the part with **Plate only**
+   ticked.
+4. **A hoop is used** where the overhang has a hole in it, or where a gusset won't fit.
+
+Every gusset and hoop goes through the same checks as one you draw, so none can run
+into the part or touch another support. Untick **Straight walls** to leave everything
+to the curved walls, gussets and hoops. The readout counts gussets apart from walls,
+e.g. "1 support fin · 10 tines + 2 gussets".
+
+The rules and numbers are in `docs/FIN-SPEC.md` ("Auto can use"), the code is
+`web/fins/gussets.js`, and `tests/autogusset.test.js` pins it on the three test parts.
+**Not printed yet.**
+
+#### Fill an overhang (paint bucket)
+
+Placing supports one click at a time is slow along a long lip. The paint bucket fills
+a whole overhang at once:
+
+![Filling a long curved lip with gussets in one click](docs/images/paint-bucket.gif)
+
+1. In **Draw**, pick the shape you want: **Line**, **Curve**, **Gusset** or **Hoop**.
+2. Turn on **Fill an overhang** (the bucket button under the shapes).
+3. Hover a red overhang: all of it lights up blue, so you can see what one click covers.
+4. Click it. Every support of that shape that fits goes in, placed the way Auto would
+   place them under that one overhang.
+
+What you get:
+
+- **Line** lays straight walls, **Curve** lays walls that bend where the overhang does,
+  **Gusset** and **Hoop** stand off the upright sides under it.
+- Each support is an ordinary drawn one: click it to select it, then **Delete** or
+  **Remove selected**. One **Undo** takes back the whole fill.
+- A small bore that Auto leaves bare on purpose is filled too, because you clicked it.
+- If nothing of that shape fits (a gusset with no upright side under the overhang, a
+  hoop with no hole or edge to follow), nothing is placed and the readout says why.
+  Try another shape.
+- Filling the same overhang twice adds a second set; Undo removes it.
+- A big overhang takes a moment (about 3 s for hoops on a 290 mm² lip); the readout
+  says "filling the overhang…" meanwhile.
+
+Click **Fill an overhang** again to go back to placing one support at a time. The code
+is `web/fins/bucket.js`, tested in `tests/bucket.test.js`.
+
+### Section view: see inside the part
+
+Supports inside a tube, a box or a bore are hard to see, and hard to click. The
+**Section** badge under the view cuts the part with a plane, like a section analysis
+in CAD, so you can look inside and draw there:
+
+![Cutting a tube across Z, then across Y, and sliding the cut](docs/images/section-cut.gif)
+
+1. Click **Section** in the bar under the view.
+2. Pick **Cut across X**, **Y** or **Z** to cut square to one of the bed's axes. It
+   keeps the half away from you.
+3. Drag the slider to slide the cut from one end of the part to the other; the number
+   beside it is how far in it is, in mm.
+
+More controls in the same popover:
+
+- **Ghost** (the default) shows the cut-away half as faint glass, so you keep your
+  bearings; **Hide** leaves it out. Clicks go through the glass to what's behind it.
+- **Flip** keeps the other half instead.
+- **Re-aim** points the cut at the current view again, through the part's middle.
+- The arrow and rings on the cut push and tilt it by hand; Shift + scroll pushes it
+  1 mm a notch.
+
+Clicks land on the part you can see, so you can draw supports inside while the cut is
+on. It only changes the view: it isn't saved, and the export is always the whole part.
+Click **Section** again to turn it off.
+
 ### The "no config, geometry only" notice
 
 Opening the 3MF, **Bambu Studio** ("invalid config, load geometry data only") and
@@ -159,7 +334,7 @@ This uses the latest stable release by default.
 To pin a release, add this to a `.env` file beside `docker-compose.yml`:
 
 ```env
-SUPPORT_FINS_VERSION=v0.1.0
+SUPPORT_FINS_VERSION=v1.0.0
 ```
 
 To build the checked-out source instead:
@@ -185,6 +360,19 @@ Tests (Deno for the JS engine):
 deno test --allow-read tests/
 ```
 
+### Releases
+
+`main` is staging: once Cloudflare deploys the `live` branch, every merge shows up at the
+`main` preview, not on printfins.com.
+A PR that changes what a user sees adds one line to `unreleased` in `web/changelog.json`.
+To ship, run Actions > release > Run workflow (version empty for the next patch, or say
+`1.1.0`). It stamps everything unreleased under that version, writes the landing card's
+What's new list into `web/index.html`, runs the tests and pushes that as one release
+commit to `main`; then it tags it, moves the `live` branch printfins.com deploys from,
+attaches the plugin builds and publishes the Docker image. Fix an entry's wording on `main`
+before you run it. Releases are on the
+[Releases page](https://github.com/gittrahan/support-fins/releases) and the site's landing card.
+
 ## The PrusaSlicer plugin (hand-placed)
 
 `plugins/prusa/` is a native PrusaSlicer 3.0 plugin, **Support Fins → Add a Fin**. The 3.0
@@ -197,8 +385,8 @@ which would stretch the one-layer tines. Confirmed working in PrusaSlicer 3.0 al
 
 ## Honest limitations
 
-- Overhangs sitting over the _part_ rather than the plate aren't handled — fins attach to
-  the bed only.
+- Overhangs sitting over the _part_ rather than the plate aren't handled automatically.
+  Fins attach to the bed, and a gusset off an upright side has to be placed by hand.
 - Features shorter than roughly a 4 mm wall height are too short for a real fin.
 - It won't pick your orientation for you. On purpose.
 

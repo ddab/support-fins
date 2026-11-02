@@ -101,7 +101,7 @@ export function fillReach(coverage) {
  * centroid alone would call the whole face held or bare). `regions` (a Set, or
  * null for all) keeps only those regions' faces.
  */
-function leftoverPoints(topo, result, rot, near, cls, regions = null) {
+export function leftoverPoints(topo, result, rot, near, cls, regions = null) {
   const { pos } = topo, off = result.offset;
   const seat = (o) => [rot[0] * pos[o] + rot[3] * pos[o + 1] + rot[6] * pos[o + 2] + off.x,
     rot[1] * pos[o] + rot[4] * pos[o + 1] + rot[7] * pos[o + 2] + off.y,
@@ -462,7 +462,7 @@ function boxesOf(a, b, c, fn, depth = 0) {
 /** Every support triangle's box, gridded in plan AND height (a tall wall's boxes stack
  *  ~25 to a plan cell, and Auto's tines more: a plan-only grid made each check walk
  *  them all, ~0.3 s a wall on a 250k-face bust), so "does this new wall touch one" is cheap. */
-function boxGrid() {
+export function boxGrid() {
   const C = 3, CZ = 3, grid = new Map();
   // 13 bits a cell index (+-12 m at 3 mm); a collision past that only adds candidates
   const key = (i, j, k) => ((i + 4096) * 8192 + (j + 4096)) * 8192 + (k + 4096);

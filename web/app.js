@@ -27,6 +27,7 @@ import { loadURL } from './ui/io.js';
 import { applyVolume } from './ui/volume.js';
 import { buildExportGeometry } from './ui/export.js';
 import './ui/plugins.js';
+import './ui/whatsnew.js';
 import './ui/calibrate.js';
 import './ui/topbar.js';
 import './ui/phone.js';

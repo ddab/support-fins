@@ -309,6 +309,22 @@ over 7 layers. The printed numbers above still stand.
 | clash | ≥ 1 mm of air from another brace (square-ended foot and body rectangles compared at matching heights) and from any prop wall or wedge (compared at the bed, where both are widest) | two supports fused into one piece no longer break away in pieces; square ends allow clear braces on opposite sides of a thin part without imaginary rounded caps extending through it |
 | auto placement | up to 4 faces with bearings ≥ 60° apart, a rib per ~100 mm of face width, at the face's **tallest** columns | holds both axes; a rib at a gable's low end braces the half that wasn't moving |
 | manual | Draw mode: one click on an upright side; click a placed support to select it, Delete / "Remove selected" to take it out | |
+| manual: the face | a hand-placed brace stands on **its own strip** of the part (`web/swaycolumn.js`): every face connected to the click that takes a brace (≤ 30° down, ≤ 45° up), heading within **50°** of the clicked face, within **10 mm** either side of the click, with **no flatness limit**. Its inner edge follows that strip in **1 mm bands**; below or above the strip it follows whatever part is in the slab, and past both it holds plumb. A seam jog steeper than 45° is lifted out from the part; a stretch that leans past 45° over **4 mm** (a back rolling over) ends the brace there, or refuses it under 20 mm | Auto's flat patches (1.2 mm flatness) cut a side that curves up its height into short strips, so a brace was refused at most spots on a curved back ("only reaches 20 mm up", "the part sticks out") and worked only where a patch seam happened to fall (GH #351). 8 mm bands left tines bridging 3–4 mm on a bent arm; 1 mm bands keep them under the 1.5 mm limit |
+
+## Isolated narrow struts — `web/prop/lattice.js`, `web/fins/shortwalls.js`
+
+After the existing last-resort pass, retained overhang regions still untouched by
+walls or wedges can try the longitudinal route used for joined lattice struts.
+The footprint must be at least twice as long as it is wide, no wider than 7 mm
+(the lattice classifier's existing `2 * NET_HALF`), and long enough for the
+existing part-wall minimum. This addresses #121's isolated cross-sloped struts:
+down-slope tracks can run across their narrow width and be discarded.
+
+Existing supports stay in place. The 12 mm² region threshold, small-hole
+exemptions, short-wall aspect limits, part clearance and conservative exclusion
+around existing supports remain in force. This changes default placement only
+where a qualifying bare strut gains a safe wall; it does not guarantee support
+for every headset overhang. Physical printing remains unvalidated.
 
 ## Wall ribs (Full coverage) — `web/prop/brace.js`
 
@@ -354,6 +370,88 @@ set the numbers.
 | clearance | `sideClear` off the part (only at stations whose floor is the plate) and off every other support below the rib's top, in plan, ~1 mm pieces | no rib fuses two pieces; a 3D box grid was exact but cost 4 s on bigplate Y35, this ~0.2 s |
 | skipped | a wall the fill pass already ribbed (the slim rule) | no doubled ribs |
 
+## Gussets (Draw, and Auto when ticked) — `web/gusset.js`
+
+Printed once: a 25 × 20 × 35 mm upside-down L at default settings (2026-10-28) printed
+clean, the gusset holding the arm. The angle, gap and tine spacing are starting values,
+not tuned from a coupon. Under an upside-down L every other support hangs straight
+down to the plate, though the L's own upright is right there. A gusset stands off the
+upright instead: a vertical triangle square off the side, tined to it across a flank's clearance, its top
+the usual tip under the overhang, its underside climbing out from the side steeply
+enough to print unsupported. Nothing under it reaches the plate. Placed by hand only:
+Draw > Gusset, a click on the side, then a click on the overhang.
+
+| feature | value | rationale |
+|---|---|---|
+| direction | the clicked face's normal, levelled; the second click sets only the reach | square off the side, so the inner end sits evenly off it |
+| inner end | **`PROP.sideClear`** (0.35 mm) off the side | a flank: `welds` fails one closer than 0.205 mm, so the tines bridge it |
+| underside | `GUSSET.angle` (**50°**) from level, never flatter than **45°** | the 45° a printer holds, with margin; a coupon should set it |
+| reach | **1–40 mm** out from the side | a 2 mm lip droops without one, and its fin past the standoff is still about its own thickness long; shorter is a tine; longer is a sail, stand a wall on the plate |
+| outer end | **2 mm** deep under the overhang (at least `minHeight` + `footGap`) | no knife edge at the tip |
+| body | `sweepBetween` run out from the side, its floor line the sloped underside | the part-attached wall's tip, gap and holes, unchanged |
+| top | settled as a drawn wall's (`contourTop`, `lowerSag`, `settleTop`, within `PART_BAND`); where the swept body still meets the part, the stations round it lowered to the lowest of them and swept again, up to 4 times (`sweptClear`) | a round boss slopes across the tip, a groove steps along it: the top takes them rather than the fin being refused |
+| side tines | sway's tine (`SWAY.tineW`, one layer, kissed) up the inner edge: one in the fin's **first layer**, one in its **top layer** under the gap, evenly between at most **2 mm** apart; built whether Tines is on or off | the side is all that holds the fin up until the overhang prints over it: its first layer would otherwise start in air |
+| top tines | `emitTines` along the contact line, as a drawn wall, when Tines is on | a horizontal tine bites sideways, so a sloped underside takes them and a flat one gets none, same as a drawn wall |
+| clearance | ends trimmed by `trimmedEnds` (the outer end may come in, the inner may not), every station through `clearBetween`, then the swept body measured by `solidClearance` against `welds` | a drawn part wall's checks, plus Auto's exact measure: a rib thinner than the 1 mm station pitch is seen only by the solid |
+| other supports | kept `PROP.sideClear` off Auto's fins on screen and every hand-placed support stood before it (`boxGrid`, in 3D) | two supports that touch fuse into one piece that won't break away; 3D, so the bed pad under a gusset is no clash |
+| refused | not an upright face (≤ 30° lean); the side doesn't reach ≥ 80 % of the inner edge, or isn't there at its first layer; the body would cut into or weld to the part; another support within `sideClear` | says why, before the click, in the ghost |
+
+### Gusset hoops (Draw, and Auto when ticked) — `web/hoop.js`
+
+Not printed yet. A gusset whose top follows the overhang's edge round and back to the
+side, instead of running square off it, so the middle of the overhang stays open: a
+rounded tab with a screw hole keeps its hole clean. Placed by hand: Draw > Hoop, a
+click on the side, then a click on the overhang. Everything not in this table is a
+gusset's (above).
+
+| feature | value | rationale |
+|---|---|---|
+| the edge | the FREE boundary of the down-facing faces (normal ≥ 60° from upright, `HOOP.downCos`) grown from the one under the click: where the face beyond runs up (the overhang's rim), not down (a side under it) | the overhang's own outline, any shape; a rim's inside edge is a closed loop of it |
+| the tab | from the edge point furthest from the side within **8 mm** of the click (`HOOP.pick`), down both flanks while they close on the side: to the side, or to where the edge levels out (closing by under **0.15 mm** a mm, `HOOP.level`, once **1 mm** nearer than the tip) | the tip, not a hole beside it; an eyelet on a lip stops where it meets the lip |
+| distance to the side | measured straight back along the clicked side's normal to the solid, just under the overhang | the side itself, curved or not, not the clicked face's plane |
+| path | the tab moved in so the hoop's outer face stands **0.15 mm** (`HOOP.edgeIn`) inside the edge, or to the middle where the overhang is narrower than that before another free edge (an eyelet's ring); stations every **0.5 mm** (`HOOP.step`) | an edge curls tighter than a wall's 1 mm pitch follows; the contact stays under a thin ring |
+| legs | from each end of the tab straight back to the side under the overhang | an eyelet on a lip reaches the side across the lip |
+| ends | **`sideClear` + half the wall** off the side, both; clearance may trim them at most **1 mm** (`HOOP.endSlack`) further | the end cap's corners stand a flank off the side when the edge meets it at an angle, and the tines still reach |
+| underside | climbs at `GUSSET.angle` **along the hoop** from each end to `GUSSET.endDepth` under the overhang half way round | every layer of the bottom edge sits on the one below; climbing by distance from the side instead would leave the far end flat, a bridge |
+| side tines | a gusset's, at **both** ends | tied to the side twice |
+| length | at most **120 mm** round (`HOOP.maxLength`) | past that it's a fence |
+| refused | a leg crosses open air to the side (`use a gusset instead`); no overhang or free edge at the click; any of a gusset's reasons | says why, in the ghost |
+
+### Auto can use: gussets and hoops in Auto — `web/fins/gussets.js`
+
+Not printed yet. Four boxes say what Auto and Full coverage may place: **Straight
+walls** (on), **Curved walls** (off; above), **Gussets** and **Hoops** (both off, so Auto
+is unchanged until they're ticked). Each gusset or hoop is built by `gussetAt` /
+`hoopAt` exactly as a drawn one, from a "click" found here; everything in the two
+tables above applies. Runs after the walls (Full's fill included) and before the
+sway braces.
+
+| feature | value | rationale |
+|---|---|---|
+| what it aims at | the red the walls leave bare, and the red a wall **≥ 10 mm** tall (`AUTO_GUSSET.minWall`) holds that no staying support holds; held as Full coverage measures it (`reachOf`, `fillReach`) | the same scoreboard as the fill, so "held" means one thing |
+| the side | from a red point, **0.5 mm** under it, the solid looked for in **16** directions; the nearest two upright faces (≤ 30° lean) whose normal points back at the red | the side under the overhang, wherever it is round the point |
+| reach | out along the side's normal while the underside stays within **3 mm** of where it started (`AUTO_GUSSET.rise`), less 0.3 mm; then **0.7 ×** that if refused | to the overhang's edge, not up the next step |
+| gusset or hoop | a hoop first where the overhang there has a closed free edge (a hole); else a gusset; a hoop if no gusset stands | a gusset straight out runs under the hole |
+| swapping a wall | tallest first, at most **12**: kept unless it is **≥ 3 ×** (`AUTO_GUSSET.taller`) as tall as the gussets that replace it **and** they hold **≥ 95 %** (`AUTO_GUSSET.held`) of its red | a short wall is sturdy and leaves no tine marks up the side |
+| how many | most red first, a point near (2 mm) one that failed not tried again; **60** tries for the bare red, **40** per wall | bounded on a big part |
+| Straight walls unticked | Auto's straight walls and wedges dropped first (a curved wall stays), so only the curves, gussets and hoops hold the part | the user's choice; the readout says what's bare |
+| Worker | the topology keeps its vertex ids when Hoops is ticked (`hoop.js edgesFrom` follows the edge by them) | dropped otherwise, as before |
+
+### Draw's paint bucket — `web/fins/bucket.js`
+
+Not printed yet. With **Fill an overhang** on, a click on a red overhang (one of
+`analyze`'s regions) runs Auto on that region alone and hands back each support as the
+clicks Draw stores. Everything Auto does applies; these are the differences.
+
+| feature | value | rationale |
+|---|---|---|
+| what it aims at | only the clicked region (the rest of the part is treated as needing nothing); a small bore Auto leaves bare (`coverage.js` HOLE) counts as red | it was clicked |
+| Line | Auto's walls and wedges, each cut into straight pieces no further than **1 mm** (`BUCKET.tol`) from its top line; pieces under **2.5 mm** dropped | Draw stores a line as two clicks |
+| Curve | Auto with Curved walls; a bent wall as arcs through three of its points (≥ `DRAW_MIN_RADIUS`), a bend that sags under 0.5 mm laid straight | Draw stores a curve as three clicks |
+| Gusset / Hoop | Auto's gussets (or hoops) with no walls (`straightWalls: false`), each kept as its side's normal, side point and reach (`at` on the fin record) | re-stood exactly as a drawn one |
+| kept | each piece only if `drawnWall` stands it from its clicks (a curve that won't, as the straight piece) | the rebuild never lists one as failed |
+| on the page | inline, not in the Worker; one history step for the whole fill | about half a second for walls or gussets under a 290 mm² overhang, about 3 s for hoops there; the readout says it is filling |
+
 ## Joined walls and ties (Full coverage) — `web/fins/fill.js`, `web/prop/ties.js`
 
 Not printed yet. A figure's fill walls stood apart, each on its own ("all the fins become
@@ -398,6 +496,21 @@ that fit beside it. `raster: false` continues to disable all placement races.
 This changes default geometry for accepted circular recesses. It does not
 redistribute already built supports or solve spacing across obstructed arcs.
 Related to GitHub #50; general organic and complex curved placement remains open.
+
+## Gently bent small tubes — `web/prop/tubecurve.js`
+
+For #50, a small tube rejected by the straight-axis convexity test can try its
+actual lowest line. Vertical cross-sections of the source triangles locate one
+connected minimum each; the existing convexity and two-sided-area thresholds
+are then evaluated about the local line. The candidate competes with the same
+split-patch route and still passes ordinary placement and clearance checks.
+
+Missing or ambiguous minima, abrupt jumps between branches, and lines beyond
+the existing `maxWander` limit are refused. Concave pockets do not become tubes.
+This changes default placement for accepted gently bent undersides, without
+changing circular-recess rules or promising support for arbitrary organic
+surfaces. The procedural regression and public Lissajous example establish
+software behavior; physical printing remains unvalidated.
 
 ## Arc walls (Auto and Full) — `web/prop/arc.js`
 

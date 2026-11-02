@@ -53,7 +53,7 @@ export function syncCoverageUI() {
   el('long-walls-fld').hidden = !full;   // Full coverage's own (fins/rows.js)
   // only the fill pass joins walls (#309): Full's, and Auto's under Curved walls
   el('separate-walls-fld').hidden = !(full || (autoLike() && el('curved-walls').checked));
-  el('curved-walls-fld').hidden = !autoLike();   // Draw lays its own lines
+  el('auto-uses').hidden = !autoLike();   // Draw lays its own lines and stands its own gussets
   syncMore();   // coverage counts as changed only while the build reads it
 }
 // Suggest + Draw mix: when true, the pointer places hand-drawn walls ON TOP of the
@@ -275,6 +275,7 @@ el('tall-ribs-height').addEventListener('change', () => {
 });
 // Curved walls (#25): read by Auto's build in the Worker (finbuild.js finOpts).
 el('curved-walls').addEventListener('change', () => { syncCoverageUI(); refreshFins(); });
+for (const id of ['straight-walls', 'auto-gussets', 'auto-hoops']) el(id).addEventListener('change', () => refreshFins());
 
 // Interface material (GitHub #21): a wall's top band becomes its own solid, exported
 // as a part of the supports in the 3MF -- under flat contacts, or everywhere (tines

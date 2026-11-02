@@ -32,6 +32,19 @@ export function negativeComponents(object, config) {
  * `cut` is a private test seam for failures that must never reach generation. */
 export async function subtractProjectNegatives(model, expected, cut = cutNegatives) {
   const negatives = model.extras.filter((e) => e.kind === 'negative');
+  if (model.components) {
+    if (model.components.some((c) => c.kind === 'negative' && !c.positions.length)) {
+      throw new Error('negative parts contain missing or empty cutter geometry');
+    }
+    // One declared negative component can wrap several leaf meshes. Count root
+    // component occurrences, not leaf meshes or mesh IDs reused at other poses.
+    const occurrences = new Set(model.components
+      .filter((c) => c.kind === 'negative' && c.positions.length)
+      .map((c) => c.route[0]));
+    if (occurrences.size !== expected) {
+      throw new Error(`negative parts: expected ${expected} cutter components, decoded ${occurrences.size} occurrences; missing or empty cutter geometry`);
+    }
+  }
   if (negatives.length !== expected) {
     throw new Error(`negative parts: expected ${expected} cutter components, decoded ${negatives.length}; missing or empty cutter geometry`);
   }
@@ -66,9 +79,9 @@ function partPath(path) {
   return name;
 }
 
-/** Load one selected dependency tree. Returning only positions allows decoded
- * members, paint and cutters to be collected before fin generation/next object. */
-export async function projectPositions(zip, rootBytes, configBytes, plan) {
+/** Load only the selected dependency tree. Callers must release the returned
+ * model before processing another object; there is no project-wide mesh cache. */
+export async function projectModel(zip, rootBytes, configBytes, plan) {
   const members = new Map([[ROOT, rootBytes], [CONFIG, configBytes]]);
   const visiting = new Set(), visited = new Set();
   const load = async (name) => {
@@ -94,7 +107,15 @@ export async function projectPositions(zip, rootBytes, configBytes, plan) {
     if (!path) throw new Error('inline component meshes are not yet supported in project mode');
     await load(partPath(path));
   }
-  const model = readThreeMFParts(members, { buildIndex: plan.number - 1, doublePrecision: true, outwardWinding: true }).objects[0];
+  const model = readThreeMFParts(members, { buildIndex: plan.number - 1, doublePrecision: true,
+    outwardWinding: true, withComponents: plan.negativeCount > 0 }).objects[0];
   members.clear();
+  return model;
+}
+
+/** Analysis callers retain only positions, allowing decoded members, painting
+ * and cutters to be collected before fin generation or the next object. */
+export async function projectPositions(zip, rootBytes, configBytes, plan) {
+  const model = await projectModel(zip, rootBytes, configBytes, plan);
   return subtractProjectNegatives(model, plan.negativeCount);
 }
